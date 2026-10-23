@@ -1,0 +1,14 @@
+{
+    "dataset_name": "NF-UNSW-NB15",
+    "random_state": 10,
+    "total_records": 1623118,
+    "train_records": 1104497,
+    "val_records": 155586,
+    "heldout_test_records": 363035,
+    "ratios": {
+        "train_ratio_of_total": 0.6804785604004145,
+        "test_partition_ratio_of_total": 0.3195212536819923,
+        "val_ratio_of_test": 0.3,
+        "heldout_ratio_of_test": 0.7
+    }
+}

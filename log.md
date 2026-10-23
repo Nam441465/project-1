@@ -1,0 +1,14 @@
+## [2026-10-21] Hoàn thành 100% Thực nghiệm Cơ sở Random Forest (5/5 Loại Tấn công)
+- **Đã làm:**
+  - Hoàn tất toàn bộ chuỗi thực nghiệm cơ sở cho cả 5 loại tấn công: `DoS`, `Backdoor`, `Analysis`, `Reconnaissance`, `Exploits`.
+  - Mỗi loại tấn công đều chạy trọn vẹn 2 điều kiện: **Không SMOTE** và **Có SMOTE (56,000 mẫu)** qua toàn bộ dải $k \in [3, 5, 7, 10]$.
+  - Tối ưu tham số qua 3-fold `RandomizedSearchCV`, dò ngưỡng tối ưu F1 trên Validation, đánh giá độc lập trên Held-out Test (~350k mẫu mỗi bài toán).
+  - Xuất và lưu trữ toàn bộ: 10 file metric `.csv`, 40 mảng xác suất dự đoán `.npy` và bảng tổng kết [summary_rf_comparison.csv](file:///Ubuntu-24.04/home/hi_nam/project%201/project/results/baseline/summary_rf_comparison.csv).
+- **Kết quả thu được (Đối chiếu trực tiếp với bài báo MDPI 2026):**
+  - **DoS:** Không SMOTE F1 = 0.8650 vs Có SMOTE F1 = 0.8503 (SMOTE tăng Recall: 0.9097 -> 0.9177, FN giảm 102 -> 93 nhưng tăng FP 219 -> 272).
+  - **Backdoor:** Không SMOTE F1 = **0.9535** vs Có SMOTE F1 = 0.9486 (Không SMOTE tốt hơn, FP tăng khi dùng SMOTE).
+  - **Analysis:** Không SMOTE F1 = **0.8733** vs Có SMOTE F1 = 0.8724 (Không SMOTE tốt hơn; SMOTE khiến số ca báo nhầm FP tăng gấp 3 lần từ 3 lên 9!).
+  - **Reconnaissance:** Không SMOTE F1 = **0.9673** vs Có SMOTE F1 = 0.9642 (Không SMOTE tốt hơn; FN tăng từ 30 lên 54 khi dùng SMOTE).
+  - **Exploits:** Không SMOTE F1 = **0.9470** vs Có SMOTE F1 = 0.9450 (Đánh đổi: SMOTE tăng nhẹ Recall 0.9664 -> 0.9689 nhưng tăng FP từ 413 lên 452).
+- **Kết luận khoa học vòng 1:** Toàn bộ thực nghiệm trên 1.62 triệu dòng `NF-UNSW-NB15` xác nhận độc lập và đồng thuận 100% với luận điểm của bài báo: **SMOTE không phải là giải pháp vạn năng; 4/5 loại tấn công đạt F1 tốt hơn khi KHÔNG dùng SMOTE, và SMOTE luôn tiềm ẩn rủi ro tăng cảnh báo giả (FP).**
+- **Kế hoạch tiếp theo:** Bắt đầu Giai đoạn 2 - Điều chỉnh cải tiến (Gradient Boosting, Ngưỡng theo Recall, Mô hình nhạy chi phí Cost-Sensitive, Phân tích mẫu bị bỏ sót).

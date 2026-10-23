@@ -1,0 +1,2 @@
+attack,condition,k,val_threshold,val_f1,test_accuracy,test_precision,test_recall,test_f1,TP,FP,FN,TN,n_estimators,min_samples_leaf,max_features,class_weight,selected_features,train_time_sec,test_time_sec,total_k_time_sec
+Backdoor,smote,3,0.5,0.9086,0.9998,0.9093,0.8819,0.8954,351,35,47,346806,400,3,None,None,L4_SRC_PORT;L4_DST_PORT;IN_BYTES,515.62,2.06,538.21

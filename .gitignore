@@ -1,0 +1,34 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Caches and checkpoints
+.ipynb_checkpoints/
+.pytest_cache/
+.vscode/
+.idea/
+
+# Large dataset files (Raw & Processed)
+data/*.csv
+data/*.zip
+data/raw_bags/
+data/raw_zips/
+data/processed/*.parquet
+data/processed/*.csv.gz
+
+# Exception: Keep small data metadata & feature description
+!data/NetFlow_v1_Features.csv
+!data/processed/split_summary.csv
+!data/processed/split_metadata.json
+
+# Large model binaries and prediction probability arrays
+results/baseline/*.npy
+results/baseline/models/*.joblib
+results/improved/*.npy
+results/improved/models/*.joblib
+
+# Exception: Track all result metrics and summary CSVs/JSONs
+!results/**/summary_*.csv
+!results/**/*_metrics.csv
+!results/**/metadata.json
