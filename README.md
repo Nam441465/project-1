@@ -28,11 +28,12 @@ project/
 │   └── 00_test.ipynb          # Notebook nháp thử nghiệm ban đầu
 │
 ├── src/                       # Mã nguồn thực thi chuẩn hóa theo module
-│   ├── data_loader.py         # Nạp và chia dữ liệu (Train 70%, Test 30% -> Val 30%, Held-out 70%)
-│   ├── preprocessor.py        # Mã hóa biến, lọc nhị phân từng loại tấn công
-│   ├── feature_selection.py   # Lựa chọn đặc trưng SelectKBest (Mutual Information)
-│   ├── models.py              # Xây dựng và tinh chỉnh Random Forest, Gradient Boosting
-│   └── evaluation.py          # Tính toán ma trận nhầm lẫn, PR-curve, ngưỡng recall, chi phí
+│   ├── split_data.py          # Phân chia dữ liệu (Train/Val/Held-out) và lưu cache parquet
+│   ├── preprocessor.py        # Trích xuất 10 đặc trưng NetFlow, lọc nhị phân từng loại tấn công
+│   ├── feature_selection.py   # Lựa chọn đặc trưng SelectKBest (Mutual Information với discrete_features) và SMOTE
+│   ├── train_rf.py            # Huấn luyện Random Forest, chống rò rỉ CV, dò ngưỡng, lưu model
+│   ├── run_experiments.py     # Điều phối chuỗi thực nghiệm cơ sở cho cả 5 loại tấn công
+│   └── test_pipeline.py       # Bộ kiểm thử tự động toàn diện pipeline (7 test suites)
 │
 ├── results/                   # Lưu trữ toàn bộ bảng số liệu thực nghiệm
 │   ├── baseline/              # Kết quả theo đúng phương pháp tác giả (Có/Không SMOTE)
