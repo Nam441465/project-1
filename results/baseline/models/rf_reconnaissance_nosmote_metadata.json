@@ -1,0 +1,23 @@
+{
+    "attack": "Reconnaissance",
+    "condition": "nosmote",
+    "k": 10,
+    "val_threshold": 0.44,
+    "val_f1": 0.9754,
+    "test_accuracy": 0.9995,
+    "test_precision": 0.9464,
+    "test_recall": 0.9891,
+    "test_f1": 0.9673,
+    "TP": 2719,
+    "FP": 154,
+    "FN": 30,
+    "TN": 346687,
+    "n_estimators": 300,
+    "min_samples_leaf": 2,
+    "max_features": "sqrt",
+    "class_weight": null,
+    "selected_features": "L4_SRC_PORT;L4_DST_PORT;PROTOCOL;L7_PROTO;IN_BYTES;OUT_BYTES;IN_PKTS;OUT_PKTS;TCP_FLAGS;FLOW_DURATION_MILLISECONDS",
+    "train_time_sec": 84.44,
+    "test_time_sec": 0.98,
+    "total_k_time_sec": 251.97
+}

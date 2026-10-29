@@ -9,6 +9,18 @@ __pycache__/
 .vscode/
 .idea/
 
+# Environments & virtualenvs
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# Temporary and OS files
+*.tmp
+.DS_Store
+Thumbs.db
+
 # Large dataset files (Raw & Processed)
 data/*.csv
 data/*.zip
@@ -31,4 +43,4 @@ results/improved/models/*.joblib
 # Exception: Track all result metrics and summary CSVs/JSONs
 !results/**/summary_*.csv
 !results/**/*_metrics.csv
-!results/**/metadata.json
+!results/**/*_metadata.json

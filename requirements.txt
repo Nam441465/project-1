@@ -1,0 +1,13 @@
+# ==============================================================================
+# requirements.txt - NIDS UNSW-NB15 (NetFlow v1) & SOC NIDS Live Console
+# ==============================================================================
+# Lưu ý: Ghim cứng scikit-learn & imbalanced-learn để tương thích 100% với
+# các mô hình tuần tự hóa (.joblib) trong results/baseline/models và results/improved/models
+numpy>=2.2.0
+pandas>=3.0.0
+scikit-learn==1.9.1
+imbalanced-learn==0.14.2
+matplotlib>=3.10.0
+pyarrow>=20.0.0
+joblib>=1.4.0
+streamlit>=1.65.0

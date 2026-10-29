@@ -42,8 +42,6 @@ def apply_smote(
     return X_res, y_res
 
 DISCRETE_FEATURES = {
-    "L4_SRC_PORT",
-    "L4_DST_PORT",
     "PROTOCOL",
     "L7_PROTO",
     "TCP_FLAGS"
@@ -68,8 +66,27 @@ class MutualInfoScorer:
             idx, _ = next(sss.split(X_in, y_in))
             X_sample = X_in[idx] if isinstance(X_in, np.ndarray) else X_in.iloc[idx]
             y_sample = y_in[idx]
-            return mutual_info_classif(X_sample, y_sample, **kwargs)
-        return mutual_info_classif(X_in, y_in, **kwargs)
+        else:
+            X_sample = X_in
+            y_sample = y_in
+
+        # Mã hóa các cột discrete bằng pd.factorize để bảo toàn 100% phần thập phân và triệt tiêu UserWarning
+        if self.discrete_mask is not None and any(self.discrete_mask):
+            if isinstance(X_sample, np.ndarray):
+                X_calc = X_sample.copy()
+                for col_idx, is_discrete in enumerate(self.discrete_mask):
+                    if is_discrete:
+                        X_calc[:, col_idx] = pd.factorize(X_calc[:, col_idx])[0]
+            else:
+                X_calc = X_sample.copy()
+                for col_idx, is_discrete in enumerate(self.discrete_mask):
+                    if is_discrete:
+                        col_name = X_calc.columns[col_idx]
+                        X_calc[col_name] = pd.factorize(X_calc[col_name])[0]
+        else:
+            X_calc = X_sample
+
+        return mutual_info_classif(X_calc, y_sample, **kwargs)
 
 def fit_feature_selector(
     X_train: pd.DataFrame, 
@@ -87,21 +104,14 @@ def fit_feature_selector(
     total_samples = len(X_train)
     k = min(k, X_train.shape[1])
     
-    # Xác định mặt nạ các đặc trưng rời rạc (discrete) và đảm bảo kiểu dữ liệu int
+    # Xác định mặt nạ các đặc trưng rời rạc (discrete)
     discrete_mask = None
-    X_train_fit = X_train
     if isinstance(X_train, pd.DataFrame):
         discrete_mask = [col in DISCRETE_FEATURES for col in X_train.columns]
-        # Ép kiểu int cho các cột rời rạc (như L7_PROTO dạng float) để loại bỏ UserWarning
-        float_discrete = [c for c in DISCRETE_FEATURES if c in X_train.columns and pd.api.types.is_float_dtype(X_train[c])]
-        if float_discrete:
-            X_train_fit = X_train.copy()
-            for c in float_discrete:
-                X_train_fit[c] = X_train_fit[c].fillna(0).astype(np.int64)
     
     scorer = MutualInfoScorer(discrete_mask=discrete_mask, random_state=random_state, max_samples_for_mi=max_samples_for_mi)
     selector = SelectKBest(score_func=scorer, k=k)
-    selector.fit(X_train_fit, y_train)
+    selector.fit(X_train, y_train)
     
     # Lấy danh sách tên đặc trưng được chọn và điểm số tương ứng
     feature_names = np.array(X_train.columns)

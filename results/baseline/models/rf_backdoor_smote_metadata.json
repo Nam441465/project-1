@@ -1,0 +1,23 @@
+{
+    "attack": "Backdoor",
+    "condition": "smote",
+    "k": 10,
+    "val_threshold": 0.59,
+    "val_f1": 0.9504,
+    "test_accuracy": 0.9999,
+    "test_precision": 0.9474,
+    "test_recall": 0.9497,
+    "test_f1": 0.9486,
+    "TP": 378,
+    "FP": 21,
+    "FN": 20,
+    "TN": 346820,
+    "n_estimators": 400,
+    "min_samples_leaf": 1,
+    "max_features": "sqrt",
+    "class_weight": "None",
+    "selected_features": "L4_SRC_PORT;L4_DST_PORT;PROTOCOL;L7_PROTO;IN_BYTES;OUT_BYTES;IN_PKTS;OUT_PKTS;TCP_FLAGS;FLOW_DURATION_MILLISECONDS",
+    "train_time_sec": 99.6,
+    "test_time_sec": 1.07,
+    "total_k_time_sec": 311.43
+}

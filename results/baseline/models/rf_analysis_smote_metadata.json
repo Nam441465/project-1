@@ -1,0 +1,23 @@
+{
+    "attack": "Analysis",
+    "condition": "smote",
+    "k": 10,
+    "val_threshold": 0.94,
+    "val_f1": 0.8818,
+    "test_accuracy": 0.9997,
+    "test_precision": 0.9751,
+    "test_recall": 0.7892,
+    "test_f1": 0.8724,
+    "TP": 352,
+    "FP": 9,
+    "FN": 94,
+    "TN": 346832,
+    "n_estimators": 400,
+    "min_samples_leaf": 1,
+    "max_features": "sqrt",
+    "class_weight": null,
+    "selected_features": "L4_SRC_PORT;L4_DST_PORT;PROTOCOL;L7_PROTO;IN_BYTES;OUT_BYTES;IN_PKTS;OUT_PKTS;TCP_FLAGS;FLOW_DURATION_MILLISECONDS",
+    "train_time_sec": 113.96,
+    "test_time_sec": 1.19,
+    "total_k_time_sec": 311.72
+}

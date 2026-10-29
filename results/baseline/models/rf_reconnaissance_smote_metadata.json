@@ -1,0 +1,23 @@
+{
+    "attack": "Reconnaissance",
+    "condition": "smote",
+    "k": 10,
+    "val_threshold": 0.76,
+    "val_f1": 0.9757,
+    "test_accuracy": 0.9994,
+    "test_precision": 0.9486,
+    "test_recall": 0.9804,
+    "test_f1": 0.9642,
+    "TP": 2695,
+    "FP": 146,
+    "FN": 54,
+    "TN": 346695,
+    "n_estimators": 300,
+    "min_samples_leaf": 2,
+    "max_features": "sqrt",
+    "class_weight": null,
+    "selected_features": "L4_SRC_PORT;L4_DST_PORT;PROTOCOL;L7_PROTO;IN_BYTES;OUT_BYTES;IN_PKTS;OUT_PKTS;TCP_FLAGS;FLOW_DURATION_MILLISECONDS",
+    "train_time_sec": 83.47,
+    "test_time_sec": 0.86,
+    "total_k_time_sec": 264.58
+}

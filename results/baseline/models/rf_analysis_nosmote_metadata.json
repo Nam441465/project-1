@@ -1,0 +1,23 @@
+{
+    "attack": "Analysis",
+    "condition": "nosmote",
+    "k": 3,
+    "val_threshold": 0.55,
+    "val_f1": 0.8863,
+    "test_accuracy": 0.9997,
+    "test_precision": 0.9915,
+    "test_recall": 0.7803,
+    "test_f1": 0.8733,
+    "TP": 348,
+    "FP": 3,
+    "FN": 98,
+    "TN": 346838,
+    "n_estimators": 400,
+    "min_samples_leaf": 1,
+    "max_features": "sqrt",
+    "class_weight": null,
+    "selected_features": "L4_DST_PORT;PROTOCOL;IN_BYTES",
+    "train_time_sec": 61.27,
+    "test_time_sec": 1.03,
+    "total_k_time_sec": 159.15
+}

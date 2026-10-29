@@ -1,0 +1,23 @@
+{
+    "attack": "DoS",
+    "condition": "nosmote",
+    "k": 10,
+    "val_threshold": 0.76,
+    "val_f1": 0.8858,
+    "test_accuracy": 0.9991,
+    "test_precision": 0.8244,
+    "test_recall": 0.9097,
+    "test_f1": 0.865,
+    "TP": 1028,
+    "FP": 219,
+    "FN": 102,
+    "TN": 346622,
+    "n_estimators": 300,
+    "min_samples_leaf": 2,
+    "max_features": "sqrt",
+    "class_weight": "balanced",
+    "selected_features": "L4_SRC_PORT;L4_DST_PORT;PROTOCOL;L7_PROTO;IN_BYTES;OUT_BYTES;IN_PKTS;OUT_PKTS;TCP_FLAGS;FLOW_DURATION_MILLISECONDS",
+    "train_time_sec": 106.12,
+    "test_time_sec": 1.02,
+    "total_k_time_sec": 316.55
+}

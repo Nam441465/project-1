@@ -1,0 +1,5 @@
+attack,condition,k,val_threshold,val_f1,test_accuracy,test_precision,test_recall,test_f1,TP,FP,FN,TN,max_iter,learning_rate,max_depth,min_samples_leaf,class_weight,selected_features,train_time_sec,test_time_sec,total_k_time_sec
+Analysis,smote,3,0.95,0.8512,0.9997,0.9765,0.7466,0.8463,333,8,113,346833,300,0.05,,20,None,L4_DST_PORT;IN_BYTES;OUT_BYTES,7.3,1.02,47.92
+Analysis,smote,5,0.96,0.8512,0.9997,0.9794,0.7444,0.8459,332,7,114,346834,300,0.05,,20,None,L4_SRC_PORT;L4_DST_PORT;IN_BYTES;OUT_BYTES;OUT_PKTS,12.45,1.61,64.05
+Analysis,smote,7,0.95,0.8902,0.9997,0.9803,0.7825,0.8703,349,7,97,346834,300,0.05,,20,None,L4_SRC_PORT;L4_DST_PORT;PROTOCOL;IN_BYTES;OUT_BYTES;IN_PKTS;OUT_PKTS,13.04,1.95,76.33
+Analysis,smote,10,0.97,0.8765,0.9997,0.9858,0.7758,0.8683,346,5,100,346836,300,0.05,,20,None,L4_SRC_PORT;L4_DST_PORT;PROTOCOL;L7_PROTO;IN_BYTES;OUT_BYTES;IN_PKTS;OUT_PKTS;TCP_FLAGS;FLOW_DURATION_MILLISECONDS,14.07,1.65,93.33

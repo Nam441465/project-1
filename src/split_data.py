@@ -11,9 +11,9 @@ def split_dataset():
     output_dir.mkdir(parents=True, exist_ok=True)
     
     print(f"[*] Đang nạp dữ liệu từ: {data_path}")
-    start_time = time.time()
+    start_time = time.perf_counter()
     df = pd.read_csv(data_path)
-    load_time = time.time() - start_time
+    load_time = time.perf_counter() - start_time
     print(f"[+] Nạp thành công: {len(df):,} dòng, {len(df.columns)} cột trong {load_time:.2f}s")
     
     # Kiểm tra giá trị null
@@ -78,18 +78,13 @@ def split_dataset():
     print("\n[*] Chi tiết số lượng từng lớp tấn công qua các tập:")
     print(summary_df.to_string())
     
-    # Lưu ra đĩa (cả Parquet để nạp siêu nhanh và CSV để tiện xem)
+    # Lưu ra đĩa (Định dạng Parquet chuẩn nạp siêu nhanh và tối ưu dung lượng)
     print(f"\n[*] Đang lưu các tập dữ liệu vào {output_dir}...")
-    save_start = time.time()
+    save_start = time.perf_counter()
     
     train_df.to_parquet(output_dir / "train.parquet", index=False)
     val_df.to_parquet(output_dir / "val.parquet", index=False)
     heldout_test_df.to_parquet(output_dir / "heldout_test.parquet", index=False)
-    
-    # Lưu CSV bản nén gzip để tiết kiệm dung lượng đĩa
-    train_df.to_csv(output_dir / "train.csv.gz", index=False, compression="gzip")
-    val_df.to_csv(output_dir / "val.csv.gz", index=False, compression="gzip")
-    heldout_test_df.to_csv(output_dir / "heldout_test.csv.gz", index=False, compression="gzip")
     
     summary_df.to_csv(output_dir / "split_summary.csv")
     
@@ -110,7 +105,7 @@ def split_dataset():
     with open(output_dir / "split_metadata.json", "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=4)
         
-    print(f"[+] Đã lưu toàn bộ file thành công trong {time.time() - save_start:.2f}s!")
+    print(f"[+] Đã lưu toàn bộ file thành công trong {time.perf_counter() - save_start:.2f}s!")
 
 if __name__ == "__main__":
     split_dataset()

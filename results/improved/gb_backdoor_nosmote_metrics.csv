@@ -1,0 +1,5 @@
+attack,condition,k,val_threshold,val_f1,test_accuracy,test_precision,test_recall,test_f1,TP,FP,FN,TN,max_iter,learning_rate,max_depth,min_samples_leaf,class_weight,selected_features,train_time_sec,test_time_sec,total_k_time_sec
+Backdoor,nosmote,3,0.96,0.9028,0.9998,0.951,0.8291,0.8859,330,17,68,346824,300,0.05,,20,None,L4_DST_PORT;PROTOCOL;IN_BYTES,1.82,2.63,47.4
+Backdoor,nosmote,5,0.97,0.9226,0.9998,0.9426,0.8668,0.9031,345,21,53,346820,300,0.05,,20,None,L4_SRC_PORT;L4_DST_PORT;PROTOCOL;IN_BYTES;OUT_BYTES,1.94,2.49,57.91
+Backdoor,nosmote,7,0.98,0.9455,0.9998,0.9621,0.892,0.9257,355,14,43,346827,300,0.05,,20,None,L4_SRC_PORT;L4_DST_PORT;PROTOCOL;IN_BYTES;OUT_BYTES;IN_PKTS;OUT_PKTS,1.97,2.37,71.3
+Backdoor,nosmote,10,0.99,0.9521,0.9999,0.9782,0.902,0.9386,359,8,39,346833,300,0.05,,20,None,L4_SRC_PORT;L4_DST_PORT;PROTOCOL;L7_PROTO;IN_BYTES;OUT_BYTES;IN_PKTS;OUT_PKTS;TCP_FLAGS;FLOW_DURATION_MILLISECONDS,2.03,2.18,75.24

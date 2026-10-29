@@ -2,7 +2,6 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 
-# Đường dẫn thư mục dữ liệu đã tiền xử lý
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROCESSED_DIR = BASE_DIR / "data" / "processed"
 
@@ -34,7 +33,6 @@ def normalize_attack_name(attack_name: str) -> str:
     key = attack_name.strip().lower()
     if key in ATTACK_MAP:
         return ATTACK_MAP[key]
-    # Nếu truyền đúng chuẩn hoa thường thì giữ nguyên
     valid_attacks = {"DoS", "Exploits", "Backdoor", "Analysis", "Reconnaissance", "Fuzzers", "Generic", "Shellcode", "Worms"}
     for va in valid_attacks:
         if va.lower() == key:
@@ -61,11 +59,9 @@ def filter_binary_attack(df: pd.DataFrame, attack_name: str) -> pd.DataFrame:
     """
     target_attack = normalize_attack_name(attack_name)
     
-    # Lọc chỉ Benign và Target Attack
     mask = (df["Attack"] == "Benign") | (df["Attack"] == target_attack)
     filtered_df = df[mask].copy()
     
-    # Gán nhãn nhị phân: 0 = Benign, 1 = Target Attack
     filtered_df["target_label"] = (filtered_df["Attack"] == target_attack).astype(int)
     
     return filtered_df

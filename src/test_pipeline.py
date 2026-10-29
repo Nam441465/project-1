@@ -33,7 +33,7 @@ def run_all_tests():
     # TEST 1: Kiểm tra nạp 3 tập dữ liệu
     # -------------------------------------------------------------
     print("\n[TEST 1] Kiểm tra nạp các phân vùng (Train, Val, Held-out Test)...")
-    t0 = time.time()
+    t0 = time.perf_counter()
     train_df = load_split("train")
     val_df = load_split("val")
     test_df = load_split("heldout_test")
@@ -44,7 +44,7 @@ def run_all_tests():
     assert train_df.isnull().sum().sum() == 0, "Train có giá trị null!"
     assert val_df.isnull().sum().sum() == 0, "Val có giá trị null!"
     assert test_df.isnull().sum().sum() == 0, "Held-out test có giá trị null!"
-    print(f"  -> PASS: 3 tập nạp chuẩn xác 100% trong {time.time()-t0:.2f}s.")
+    print(f"  -> PASS: 3 tập nạp chuẩn xác 100% trong {time.perf_counter()-t0:.2f}s.")
 
     # -------------------------------------------------------------
     # TEST 2: Kiểm tra lọc nhị phân trên cả 5 loại tấn công
@@ -110,12 +110,18 @@ def run_all_tests():
     print(f"  -> PASS: SMOTE nâng đúng mục tiêu ({counts_sm[1]:,} mẫu), lớp đa số được bảo toàn ({counts_sm[0]:,} mẫu).")
 
     # -------------------------------------------------------------
-    # TEST 5: Kiểm tra SelectKBest với Mutual Information
+    # TEST 5: Kiểm tra SelectKBest với Mutual Information & L7_PROTO
     # -------------------------------------------------------------
-    print("\n[TEST 5] Kiểm tra SelectKBest (Mutual Information) với k=5 và k=7...")
-    selector_k5, sel_feats_5, scores_df = fit_feature_selector(
-        X_sub, y_sub, k=5, random_state=10, max_samples_for_mi=5000
-    )
+    print("\n[TEST 5] Kiểm tra SelectKBest (Mutual Information) với k=5 và k=10...")
+    import warnings
+    with warnings.catch_warnings(record=True) as recorded_warnings:
+        warnings.simplefilter("always")
+        selector_k5, sel_feats_5, scores_df = fit_feature_selector(
+            X_sub, y_sub, k=5, random_state=10, max_samples_for_mi=5000
+        )
+        user_warnings = [w for w in recorded_warnings if issubclass(w.category, UserWarning)]
+        assert len(user_warnings) == 0, f"Phát hiện UserWarning trong MutualInfoScorer: {[str(w.message) for w in user_warnings]}"
+        
     assert len(sel_feats_5) == 5, f"Số đặc trưng chọn được phải là 5, thực tế: {len(sel_feats_5)}"
     
     X_trans_5 = transform_features(selector_k5, X_sub)
@@ -123,7 +129,17 @@ def run_all_tests():
     assert list(X_trans_5.columns) == sel_feats_5, "Tên cột sau transform không khớp với selected_features"
     assert (scores_df["MI_Score"] >= 0).all(), "Điểm Mutual Information có giá trị âm!"
     
+    # Kiểm tra bảo toàn 100% phần thập phân của L7_PROTO qua transform_features
+    selector_k10, sel_feats_10, _ = fit_feature_selector(
+        X_sub, y_sub, k=10, random_state=10, max_samples_for_mi=5000
+    )
+    X_trans_10 = transform_features(selector_k10, X_sub)
+    assert "L7_PROTO" in X_trans_10.columns, "L7_PROTO không có trong X_trans_10"
+    assert (X_trans_10["L7_PROTO"] == X_sub["L7_PROTO"]).all(), "Cột L7_PROTO bị thay đổi giá trị sau transform_features!"
+    assert (X_trans_10["L7_PROTO"] % 1 != 0).any(), "Dữ liệu L7_PROTO không chứa giá trị thập phân nào để kiểm tra!"
+    
     print(f"  -> PASS: Top 5 đặc trưng theo MI: {sel_feats_5}")
+    print(f"  -> PASS: L7_PROTO bảo toàn 100% giá trị thập phân gốc; MutualInfoScorer sạch hoàn toàn UserWarning.")
     print("  -> Điểm số MI top 3 đặc trưng đầu:")
     for idx, row in scores_df.head(3).iterrows():
         print(f"     * {row['Feature']:<25}: {row['MI_Score']:.5f}")
@@ -150,7 +166,7 @@ def run_all_tests():
     from feature_selection import DISCRETE_FEATURES
     from sklearn.ensemble import RandomForestClassifier
     
-    assert len(DISCRETE_FEATURES) == 5, f"Số đặc trưng rời rạc phải là 5: {DISCRETE_FEATURES}"
+    assert len(DISCRETE_FEATURES) == 3, f"Số đặc trưng rời rạc phải là 3: {DISCRETE_FEATURES}"
     
     # Huấn luyện mô hình thử nghiệm nhỏ
     rf_toy = RandomForestClassifier(n_estimators=10, random_state=10)

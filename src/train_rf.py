@@ -57,9 +57,9 @@ def train_and_evaluate_rf(
     
     # 1. Nạp dữ liệu 3 phân vùng
     print(f"[*] Nạp dữ liệu Train / Val / Held-out Test cho {norm_attack}...")
-    t0 = time.time()
+    t0 = time.perf_counter()
     X_train, y_train, X_val, y_val, X_test, y_test = get_all_splits_for_attack(norm_attack)
-    print(f"[+] Đã nạp dữ liệu ({time.time()-t0:.2f}s):")
+    print(f"[+] Đã nạp dữ liệu ({time.perf_counter()-t0:.2f}s):")
     print(f"    - Train:    {len(X_train):,} mẫu (Benign: {np.bincount(y_train)[0]:,}, Attack: {np.bincount(y_train)[1]:,})")
     print(f"    - Val:      {len(X_val):,} mẫu (Benign: {np.bincount(y_val)[0]:,}, Attack: {np.bincount(y_val)[1]:,})")
     print(f"    - Held-out: {len(X_test):,} mẫu (Benign: {np.bincount(y_test)[0]:,}, Attack: {np.bincount(y_test)[1]:,})")
@@ -71,9 +71,9 @@ def train_and_evaluate_rf(
     # 2. Áp dụng SMOTE trên tập Train (nếu chọn) trước khi feature selection
     if use_smote:
         print(f"\n[*] Bước cân bằng lớp: Áp dụng SMOTE trên tập Train (mục tiêu {smote_target:,} mẫu)...")
-        t_sm = time.time()
+        t_sm = time.perf_counter()
         X_train, y_train = apply_smote(X_train, y_train, target_samples=smote_target, random_state=random_state)
-        print(f"[+] SMOTE hoàn thành trong {time.time()-t_sm:.2f}s.")
+        print(f"[+] SMOTE hoàn thành trong {time.perf_counter()-t_sm:.2f}s.")
         
     # Chuẩn bị file lưu kết quả CSV
     csv_file = os.path.join(RESULTS_DIR, f"rf_{norm_attack.lower()}_{condition}_metrics.csv")
@@ -90,7 +90,7 @@ def train_and_evaluate_rf(
     # 3. Quét qua từng giá trị k
     for k in k_values:
         print(f"\n>>> Đang xử lý k = {k} đặc trưng...")
-        t_k_start = time.time()
+        t_k_start = time.perf_counter()
         
         # 3.1. Chọn đặc trưng bằng Mutual Information (hỗ trợ discrete_features)
         selector, selected_cols, _ = fit_feature_selector(
@@ -135,9 +135,19 @@ def train_and_evaluate_rf(
             min_samples_per_fold = (cv - 1) * n_min_in_search // cv
             smote_k_neighbors = min(5, max(1, min_samples_per_fold - 1))
             
-            print(f"    - Khởi chạy RandomizedSearchCV với ImbPipeline (chống rò rỉ CV, mẫu={len(X_search):,}, SMOTE k_neighbors={smote_k_neighbors})...")
+            # Tính cv_smote_target tỷ lệ thuận với kích thước mẫu tìm kiếm và số fold CV
+            if smote_target == "auto":
+                cv_sampling_strategy = "auto"
+            else:
+                target_ratio = float(smote_target) / np.sum(y_train_raw == 0)
+                n_maj_fold = int(np.sum(y_search == 0) * (cv - 1) / cv)
+                n_min_fold_actual = int(np.ceil(np.sum(y_search == 1) * (cv - 1) / cv))
+                n_min_fold_target = max(n_min_fold_actual, int(round(n_maj_fold * target_ratio)))
+                cv_sampling_strategy = {1: min(n_maj_fold, n_min_fold_target)}
+
+            print(f"    - Khởi chạy RandomizedSearchCV với ImbPipeline (chống rò rỉ CV, mẫu={len(X_search):,}, SMOTE strategy={cv_sampling_strategy}, k_neighbors={smote_k_neighbors})...")
             pipe = ImbPipeline([
-                ("smote", SMOTE(k_neighbors=smote_k_neighbors, random_state=random_state)),
+                ("smote", SMOTE(sampling_strategy=cv_sampling_strategy, k_neighbors=smote_k_neighbors, random_state=random_state)),
                 ("rf", RandomForestClassifier(random_state=random_state, n_jobs=1))
             ])
             param_dist_pipe = {f"rf__{p}": v for p, v in param_dist.items()}
@@ -150,9 +160,9 @@ def train_and_evaluate_rf(
                 random_state=random_state,
                 n_jobs=-1
             )
-            t_search = time.time()
+            t_search = time.perf_counter()
             search.fit(X_search, y_search)
-            search_time = time.time() - t_search
+            search_time = time.perf_counter() - t_search
             best_params = {p.replace("rf__", ""): v for p, v in search.best_params_.items()}
         else:
             # Nếu tập train quá lớn (> 150k), lấy mẫu đại diện để tìm tham số tối ưu nhanh chóng
@@ -177,19 +187,19 @@ def train_and_evaluate_rf(
                 random_state=random_state,
                 n_jobs=-1
             )
-            t_search = time.time()
+            t_search = time.perf_counter()
             search.fit(X_search, y_search)
-            search_time = time.time() - t_search
+            search_time = time.perf_counter() - t_search
             best_params = search.best_params_
 
         print(f"    - Tham số tốt nhất ({search_time:.1f}s): {best_params}")
         
         # 3.3. Huấn luyện mô hình tối ưu trên toàn bộ X_train_k
         print(f"    - Huấn luyện Random Forest tối ưu trên toàn bộ {len(X_train_k):,} mẫu...")
-        t_fit = time.time()
+        t_fit = time.perf_counter()
         curr_rf = RandomForestClassifier(**best_params, random_state=random_state, n_jobs=-1)
         curr_rf.fit(X_train_k, y_train)
-        train_time = time.time() - t_fit
+        train_time = time.perf_counter() - t_fit
         print(f"    - Huấn luyện xong trong {train_time:.1f}s.")
         
         # 3.4. Dò ngưỡng trên tập Validation (Threshold Tuning: mở rộng dải 0.01 -> 0.99)
@@ -209,10 +219,10 @@ def train_and_evaluate_rf(
         print(f"    - Ngưỡng tối ưu trên Validation: t={val_best_thresh} (Val F1={val_best_f1:.4f})")
         
         # 3.5. Đánh giá trên Held-out Test với ngưỡng đã chọn
-        t_test = time.time()
+        t_test = time.perf_counter()
         test_proba = curr_rf.predict_proba(X_test_k)[:, 1]
         test_pred = (test_proba >= val_best_thresh).astype(int)
-        test_time = time.time() - t_test
+        test_time = time.perf_counter() - t_test
         
         acc = accuracy_score(y_test, test_pred)
         prec = precision_score(y_test, test_pred, zero_division=0)
@@ -227,30 +237,27 @@ def train_and_evaluate_rf(
         record = {
             "attack": norm_attack,
             "condition": condition,
-            "k": k,
-            "val_threshold": val_best_thresh,
-            "val_f1": round(val_best_f1, 4),
-            "test_accuracy": round(acc, 4),
-            "test_precision": round(prec, 4),
-            "test_recall": round(rec, 4),
-            "test_f1": round(f1, 4),
-            "TP": tp,
-            "FP": fp,
-            "FN": fn,
-            "TN": tn,
-            "n_estimators": best_params.get("n_estimators"),
-            "min_samples_leaf": best_params.get("min_samples_leaf"),
+            "k": int(k),
+            "val_threshold": float(val_best_thresh),
+            "val_f1": float(round(val_best_f1, 4)),
+            "test_accuracy": float(round(acc, 4)),
+            "test_precision": float(round(prec, 4)),
+            "test_recall": float(round(rec, 4)),
+            "test_f1": float(round(f1, 4)),
+            "TP": int(tp),
+            "FP": int(fp),
+            "FN": int(fn),
+            "TN": int(tn),
+            "n_estimators": int(best_params["n_estimators"]) if best_params.get("n_estimators") is not None else None,
+            "min_samples_leaf": int(best_params["min_samples_leaf"]) if best_params.get("min_samples_leaf") is not None else None,
             "max_features": str(best_params.get("max_features")),
             "class_weight": str(best_params.get("class_weight")),
             "selected_features": ";".join(selected_cols),
-            "train_time_sec": round(train_time, 2),
-            "test_time_sec": round(test_time, 2),
-            "total_k_time_sec": round(time.time() - t_k_start, 2)
+            "train_time_sec": float(round(train_time, 2)),
+            "test_time_sec": float(round(test_time, 2)),
+            "total_k_time_sec": float(round(time.perf_counter() - t_k_start, 2))
         }
         results_list.append(record)
-        
-        # Lưu xác suất dự đoán của k hiện tại
-        np.save(os.path.join(RESULTS_DIR, f"rf_{norm_attack.lower()}_{condition}_proba_test_k{k}.npy"), test_proba)
         
         # Cập nhật kết quả tốt nhất theo F1 Validation
         if val_best_f1 > best_val_f1:
@@ -280,8 +287,17 @@ def train_and_evaluate_rf(
         
         joblib.dump(best_model, model_save_path)
         joblib.dump(best_selector, selector_save_path)
+        def default_serializer(obj):
+            if isinstance(obj, (np.integer, np.int64, np.int32)):
+                return int(obj)
+            if isinstance(obj, (np.floating, np.float64, np.float32)):
+                return float(obj)
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            return str(obj)
+
         with open(meta_save_path, "w", encoding="utf-8") as f:
-            json.dump(best_model_info, f, indent=4)
+            json.dump(best_model_info, f, indent=4, default=default_serializer)
         print(f"[+] Đã lưu mô hình tốt nhất vào: {model_save_path}")
         print(f"[+] Đã lưu selector đặc trưng vào: {selector_save_path}")
     
