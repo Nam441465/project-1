@@ -1,0 +1,6 @@
+Attack,Paper_NoSMOTE_Threshold,Paper_NoSMOTE_FN,Paper_NoSMOTE_FP,Paper_NoSMOTE_Cost_c10,Paper_SMOTE_FN,Paper_SMOTE_FP,Paper_SMOTE_Cost_c10,OursRF_CostOpt_Threshold,OursRF_CostOpt_FN,OursRF_CostOpt_FP,OursRF_CostOpt_Cost_c10,OursGB_CostOpt_Threshold,OursGB_CostOpt_FN,OursGB_CostOpt_FP,OursGB_CostOpt_Cost_c10,FN_Saved_OursRFCost_vs_PaperNoSMOTE,Cost_Saved_Pct_OursRFCost_vs_PaperNoSMOTE,Cost_Saved_Pct_OursGBCost_vs_PaperNoSMOTE
+DoS,0.42,96,184,1144,94,268,1208,0.485,34,427,767,0.84,32,665,985,62,32.95,13.9
+Exploits,0.46,186,413,2273,172,452,2172,0.125,54,903,1443,0.535,57,975,1545,132,36.52,32.03
+Backdoor,0.28,24,25,265,20,21,221,0.145,12,54,174,0.235,9,74,164,12,34.34,38.11
+Analysis,0.67,95,2,952,94,9,949,0.035,14,715,855,0.34,27,603,873,81,10.19,8.3
+Reconnaissance,0.48,35,148,498,55,145,695,0.225,15,189,339,0.22,11,254,364,20,31.93,26.91

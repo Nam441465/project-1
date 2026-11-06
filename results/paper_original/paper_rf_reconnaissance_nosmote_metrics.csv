@@ -1,0 +1,5 @@
+attack,condition,k,val_threshold,val_f1,cv_best_f1,test_accuracy,test_precision,test_recall,test_f1,TP,FP,FN,TN,n_estimators,min_samples_leaf,max_features,class_weight,selected_features,mi_time_sec,search_time_sec,train_time_sec,test_time_sec
+Reconnaissance,nosmote,3,0.5,0.9184,0.9056,0.9985,0.8954,0.9156,0.9054,2517,294,232,346547,300,2,sqrt,,PROTOCOL;IN_BYTES;TCP_FLAGS,33.83,1156.44,57.76,0.7
+Reconnaissance,nosmote,5,0.51,0.9741,0.9689,0.9994,0.9469,0.9851,0.9656,2708,152,41,346689,400,2,sqrt,,PROTOCOL;L7_PROTO;IN_BYTES;OUT_BYTES;TCP_FLAGS,33.8,1293.91,81.78,0.82
+Reconnaissance,nosmote,7,0.52,0.9741,0.9699,0.9995,0.9476,0.9862,0.9665,2711,150,38,346691,300,2,sqrt,,L4_DST_PORT;PROTOCOL;L7_PROTO;IN_BYTES;OUT_BYTES;OUT_PKTS;TCP_FLAGS,34.57,1459.89,63.64,0.72
+Reconnaissance,nosmote,10,0.48,0.9754,0.9697,0.9995,0.9483,0.9873,0.9674,2714,148,35,346693,400,2,sqrt,None,L4_SRC_PORT;L4_DST_PORT;PROTOCOL;L7_PROTO;IN_BYTES;OUT_BYTES;IN_PKTS;OUT_PKTS;TCP_FLAGS;FLOW_DURATION_MILLISECONDS,35.32,1964.71,105.54,0.89

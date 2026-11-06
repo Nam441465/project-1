@@ -102,3 +102,9 @@
     - Nâng cấp [run_web.sh](run_web.sh) tự động dò tìm Python trong môi trường ảo (`.venv`, `venv`, `~/venv`) trước khi fallback về `python3`.
     - Sửa pattern ngoại lệ `!*_metadata.json` trong [.gitignore](.gitignore), cập nhật đầy đủ cấu trúc 11 scripts + ghi chú phương pháp luận `HistGradientBoosting` trong [README.md](README.md), và đồng bộ số liệu tiết kiệm chi phí SOC (`13.02% - 38.10%`) trong `log.md`.
 - **Kết quả:** Toàn bộ 7/7 test suites pipeline, 20/20 mô hình trong Registry, và giao diện Streamlit (`AppTest` headless) vượt qua kiểm thử 100% không lỗi, repository sạch sẽ sẵn sàng cho giai đoạn phát triển tiếp theo.
+
+## [2026-11-06] Hoàn thành Tái hiện Nguyên bản Bài báo Gốc (Paper-Exact RF), Đối sánh 3 Hệ thống & Báo cáo Học thuật
+- **Đã làm:**
+  - Xây dựng [src/paper_original/train_paper_rf.py](src/paper_original/train_paper_rf.py) tái hiện chính xác 100% quy trình của Pospíchal et al. (*Information* 2026, 17(9), 836) trên toàn bộ tập dữ liệu `NF-UNSW-NB15` (10 kịch bản = 5 lớp tấn công × 2 chế độ SMOTE, quét đủ 40 lượt qua $k \in \{3, 5, 7, 10\}$, tổng thời gian tính toán 87.759,8 giây ~ 24,38 giờ).
+  - Xây dựng [src/paper_original/compare_and_plot_paper_vs_ours.py](src/paper_original/compare_and_plot_paper_vs_ours.py) tổng hợp các bảng đối sánh 1-đối-1 ([three_systems_comparison.csv](results/paper_original/three_systems_comparison.csv), [soc_operational_comparison_c10.csv](results/paper_original/soc_operational_comparison_c10.csv), [mi_ranking_distortion_comparison.csv](results/paper_original/mi_ranking_distortion_comparison.csv)) và 4 biểu đồ 300 DPI (`fig_p01` – `fig_p04`).
+  - Hoàn thiện báo cáo tiến độ nghiên cứu học thuật [report_soict_hust.html](report_soict_hust.html) chuẩn định dạng in ấn A4 (`Ctrl + P`), đồng bộ 30 mô hình trực tuyến trên `SOC NIDS Live Console` và làm sạch repository sẵn sàng đẩy lên Git.

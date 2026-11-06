@@ -50,21 +50,33 @@ project/
 │   ├── ke-hoach-UNSW-NB15.pdf          # Đề cương & kế hoạch nghiên cứu 15 buổi
 │   └── Kiến thức mạng cần học...pdf   # Tài liệu bổ trợ kiến thức giao thức mạng
 │
-├── src/                                # Mã nguồn thực thi chuẩn hóa module (11 scripts)
+├── src/                                # Mã nguồn thực thi chuẩn hóa module (13 scripts)
 │   ├── split_data.py                   # 1. Phân chia tập dữ liệu train/val/test phân tầng
 │   ├── preprocessor.py                 # 2. Xử lý dữ liệu, trích xuất 10 đặc trưng NetFlow
 │   ├── feature_selection.py            # 3. Chọn đặc trưng Mutual Info & lấy mẫu SMOTE
-│   ├── train_rf.py                     # 4. Huấn luyện Random Forest, dò ngưỡng F1-Opt
-│   ├── run_experiments.py              # 5. Điều phối thực nghiệm cơ sở RF cho 5 attacks
+│   ├── train_rf.py                     # 4. Huấn luyện Random Forest cải tiến (Ours Improved RF)
+│   ├── run_experiments.py              # 5. Điều phối thực nghiệm RF cho 5 attacks
 │   ├── export_rf_models.py             # 6. Tái xuất chuẩn hóa 10 mô hình RF phục vụ Web Demo
 │   ├── generate_eda_and_baseline_plots.py # 7. Xuất 8 biểu đồ EDA & Baseline (Hình 1 - 8)
 │   ├── train_gb.py                     # 8. Huấn luyện HistGradientBoosting (Tối ưu tốc độ)
 │   ├── plot_rf_vs_gb.py                # 9. Trực quan hóa đối sánh RF vs GB (Hình 9 - 10)
 │   ├── advanced_evaluation.py          # 10. Tối ưu Recall, Cost-Sensitive & Forensics (Hình 11 - 13)
-│   └── test_pipeline.py                # 11. Bộ kiểm thử tự động toàn diện (7 test suites)
+│   ├── test_pipeline.py                # 11. Bộ kiểm thử tự động toàn diện (7 test suites)
+│   └── paper_original/                 # Tái hiện nguyên bản quy trình Pospíchal et al. (2026)
+│       ├── train_paper_rf.py           # 12. Huấn luyện Paper-Exact RF trên 100% dữ liệu (10 kịch bản)
+│       └── compare_and_plot_paper_vs_ours.py # 13. Tổng hợp đối sánh 3 hệ thống & xuất 4 biểu đồ (P01 - P04)
 │
 ├── results/                            # Bảng số liệu và báo cáo khoa học
-│   ├── baseline/                       # Kết quả thực nghiệm cơ sở Random Forest
+│   ├── paper_original/                 # Kết quả tái hiện nguyên bản bài báo gốc (Paper-Exact RF)
+│   │   ├── summary_paper_rf_comparison.csv # Bảng tổng kết 10 kịch bản Paper-Exact RF
+│   │   ├── three_systems_comparison.csv # Đối sánh toàn diện Paper-Exact vs Ours RF vs Ours GB
+│   │   ├── soc_operational_comparison_c10.csv # Đối sánh vận hành SOC tại hệ số phạt c = 10
+│   │   ├── mi_ranking_distortion_comparison.csv # Đối chứng độ lệch thứ hạng Mutual Information
+│   │   ├── paper_vs_ours_findings.md   # Báo cáo phân tích đối sánh 3 hệ thống
+│   │   ├── figures/                    # 4 biểu đồ đối sánh trực tiếp với bài báo gốc (300 DPI)
+│   │   └── models/                     # 10 mô hình Paper-Exact RF & metadata JSON
+│   │
+│   ├── baseline/                       # Kết quả thực nghiệm Ours Improved RF
 │   │   ├── summary_rf_comparison.csv   # Bảng tổng kết đối sánh Without vs With SMOTE
 │   │   ├── mi_scores_5attacks.csv      # Điểm số Mutual Information của 10 đặc trưng
 │   │   ├── *_metrics.csv               # Bảng chi tiết từng mốc k cho 5 loại tấn công
@@ -72,7 +84,7 @@ project/
 │   │   ├── eda_and_baseline_findings.md# Báo cáo phân tích EDA và Baseline
 │   │   └── models/                     # Mô hình Random Forest đã huấn luyện (.joblib)
 │   │
-│   └── improved/                       # Kết quả cải tiến Giai đoạn 2
+│   └── improved/                       # Kết quả cải tiến Giai đoạn 2 (HistGradientBoosting & SOC)
 │       ├── summary_gb_comparison.csv   # Bảng tổng kết HistGradientBoosting
 │       ├── rf_vs_gb_comparison.csv     # Bảng đối sánh trực tiếp Random Forest vs GB
 │       ├── recall_targeted_thresholds.csv # Kết quả tối ưu ngưỡng theo Recall 95%, 98%, 99%
@@ -98,8 +110,9 @@ project/
 │
 ├── web_app/                            # Ứng dụng Web Demo tương tác (SOC NIDS Live Console)
 │   ├── app.py                          # Giao diện Dashboard Streamlit 3 Tabs chuyên nghiệp
-│   └── inference_engine.py             # Lõi suy luận NIDS đa mô hình (Auto-Discovery Registry)
+│   └── inference_engine.py             # Lõi suy luận NIDS đa mô hình (Auto-Discovery 30 Models)
 │
+├── report_soict_hust.html              # Báo cáo tiến độ nghiên cứu học thuật chuẩn in ấn A4 (Ctrl + P)
 ├── run_web.sh                          # Script khởi động nhanh Web Demo trên cổng 8501
 ├── requirements.txt                    # Danh sách thư viện và phiên bản chuẩn hóa
 ├── .gitignore                          # Cấu hình loại trừ file rác, cache và binary lớn
@@ -211,6 +224,10 @@ python3 src/plot_rf_vs_gb.py
 
 # 6. Chạy đánh giá nâng cao (Recall mục tiêu, Chi phí Cost-Sensitive, Forensic FN và Hình 11, 12, 13)
 python3 src/advanced_evaluation.py
+
+# 7. Tái hiện nguyên bản 10 kịch bản Paper-Exact RF và xuất báo cáo đối sánh 3 hệ thống
+python3 src/paper_original/train_paper_rf.py --all
+python3 src/paper_original/compare_and_plot_paper_vs_ours.py
 ```
 
 ### 4.4. Khởi chạy Giao diện Web Demo (SOC NIDS Live Console)
@@ -226,7 +243,7 @@ Hệ thống cung cấp giao diện trực quan hóa Dashboard Streamlit hỗ tr
 - **Truy cập Giao diện Web:** Mở trình duyệt trên máy tính tại địa chỉ: **`http://localhost:8501`**
   - **Tab 1 (Live Single-Flow):** Nạp nhanh các mẫu thử thực tế (Benign, Typical, Near-Miss FN) hoặc tự chỉnh sửa 10 thông số NetFlow để xem phản ứng trực tiếp của Hệ thống 2 Tầng.
   - **Tab 2 (Batch Scanner):** Quét hàng loạt hàng nghìn luồng từ Held-out Test hoặc file CSV tải lên, tự động đo Throughput và tính ma trận nhầm lẫn (Confusion Matrix).
-  - **Tab 3 (Model Registry & Findings):** Quản lý tự động 20 mô hình trực tuyến, xem trực tiếp 13 biểu đồ 300 DPI và toàn văn các báo cáo khoa học.
+  - **Tab 3 (Model Registry & Findings):** Quản lý tự động 30 mô hình trực tuyến (10 Paper-Exact RF, 10 Ours Improved RF, 10 Ours HistGB), xem trực tiếp 17 biểu đồ 300 DPI và toàn văn các báo cáo khoa học.
 
 ---
 

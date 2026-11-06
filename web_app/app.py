@@ -157,9 +157,13 @@ with st.sidebar:
 
     # 1. Trạng thái Registry
     num_models = len(engine.models_registry)
+    paper_count = sum(1 for m in engine.models_registry.values() if m["model_family"] == "PAPER")
     rf_count = sum(1 for m in engine.models_registry.values() if m["model_family"] == "RF")
     gb_count = sum(1 for m in engine.models_registry.values() if m["model_family"] == "GB")
-    st.success(f"🟢 **{num_models} Mô hình Trực tuyến** ({rf_count} RF & {gb_count} HistGB)")
+    if paper_count > 0:
+        st.success(f"🟢 **{num_models} Mô hình Trực tuyến** ({paper_count} Paper-RF, {rf_count} Ours-RF & {gb_count} HistGB)")
+    else:
+        st.success(f"🟢 **{num_models} Mô hình Trực tuyến** ({rf_count} RF & {gb_count} HistGB)")
 
     st.markdown("---")
     st.markdown("### ⚙️ **Cấu hình Ngưỡng SOC**")
@@ -510,7 +514,8 @@ with tab2:
         st.markdown("**2. Mô Hình Phân Tích & Quét Lưu Lượng:**")
         col_m1, col_m2 = st.columns(2)
         with col_m1:
-            batch_model_family = st.selectbox("Thuật toán:", ["RF", "GB"], index=0)
+            avail_families = ["RF", "GB", "PAPER"] if any(m["model_family"] == "PAPER" for m in engine.models_registry.values()) else ["RF", "GB"]
+            batch_model_family = st.selectbox("Thuật toán:", avail_families, index=0)
         with col_m2:
             batch_condition = st.selectbox("Điều kiện Train:", ["Without SMOTE", "With SMOTE"], index=0)
             cond_key = "nosmote" if batch_condition == "Without SMOTE" else "smote"
@@ -697,7 +702,7 @@ with tab2:
 with tab3:
     st.markdown("### 📚 **Trung Tâm Quản Lý Mô Hình (Model Registry) & Báo Cáo Nghiên Cứu**")
 
-    sub_t1, sub_t2 = st.tabs(["🏛️ Auto-Discovered Model Registry", "🖼️ Thư Viện 13 Biểu Đồ 300 DPI & Báo Cáo"])
+    sub_t1, sub_t2 = st.tabs(["🏛️ Auto-Discovered Model Registry", "🖼️ Thư Viện 17 Biểu Đồ 300 DPI & Báo Cáo"])
 
     # --------------------------------------------------------------------------
     # SUB-TAB 1: MODEL REGISTRY
@@ -741,7 +746,7 @@ with tab3:
     # SUB-TAB 2: THƯ VIỆN BIỂU ĐỒ 300 DPI
     # --------------------------------------------------------------------------
     with sub_t2:
-        st.markdown("#### **Thư Viện 13 Biểu Đồ Khoa Học Chuẩn Xuất Bản (300 DPI)**")
+        st.markdown("#### **Thư Viện 17 Biểu Đồ Khoa Học Chuẩn Xuất Bản (300 DPI)**")
 
         figures_dict = {
             "fig01_class_imbalance.png": "Hình 1: Phân bố lớp & Mất cân bằng dữ liệu NF-UNSW-NB15",
@@ -756,7 +761,11 @@ with tab3:
             "fig10_precision_recall_curves_rf_vs_gb.png": "Hình 10: Đường cong Precision-Recall (RF vs GB trên 5 bài toán)",
             "fig11_recall_threshold_tradeoff.png": "Hình 11: Tối ưu hóa ngưỡng theo Recall mục tiêu (95%, 98%, 99%)",
             "fig12_cost_sensitive_analysis.png": "Hình 12: Phân tích Chi phí Bất đối xứng Cost-Sensitive (c=1, 5, 10, 20)",
-            "fig13_false_negative_forensics.png": "Hình 13: Giải phẫu đặc trưng các mẫu bị bỏ sót (False Negative Forensics)"
+            "fig13_false_negative_forensics.png": "Hình 13: Giải phẫu đặc trưng các mẫu bị bỏ sót (False Negative Forensics)",
+            "fig_p01_three_systems_f1_and_speed.png": "Hình P01: Đối sánh F1 và tốc độ huấn luyện của 3 hệ thống (Paper-Exact vs Ours RF vs Ours GB)",
+            "fig_p02_smote_paradox_and_leakage_ablation.png": "Hình P02: Tác động của SMOTE và thực nghiệm chống rò rỉ kiểm định chéo (CV Leakage)",
+            "fig_p03_pr_curves_three_systems.png": "Hình P03: Đường cong Precision-Recall của 3 hệ thống trên 5 lớp tấn công",
+            "fig_p04_soc_cost_and_fn_comparison.png": "Hình P04: Đối sánh chi phí rủi ro SOC (c=10) và số luồng tấn công bị bỏ sót (FN)"
         }
 
         fig_choice = st.selectbox(
@@ -766,6 +775,8 @@ with tab3:
         )
 
         fig_path = FIGURES_DIR / fig_choice
+        if not fig_path.exists():
+            fig_path = RESULTS_DIR / "paper_original" / "figures" / fig_choice
         if fig_path.exists():
             st.image(str(fig_path), caption=figures_dict[fig_choice], width="stretch")
         else:
@@ -776,10 +787,16 @@ with tab3:
         
         rep_choice = st.radio(
             "Chọn Báo cáo:",
-            ["Báo cáo Phân tích Khám phá Dữ liệu & Baseline (EDA & Baseline Findings)", "Báo cáo Giải phẫu Bỏ sót FN & Tối ưu Chi phí SOC (FN & Cost Findings)"]
+            [
+                "Báo cáo Đối sánh 3 Hệ thống: Paper-Exact vs Ours RF vs Ours GB (Paper vs Ours Findings)",
+                "Báo cáo Phân tích Khám phá Dữ liệu & Baseline (EDA & Baseline Findings)",
+                "Báo cáo Giải phẫu Bỏ sót FN & Tối ưu Chi phí SOC (FN & Cost Findings)"
+            ]
         )
         
-        if "EDA & Baseline" in rep_choice:
+        if "Paper vs Ours" in rep_choice:
+            report_file = RESULTS_DIR / "paper_original" / "paper_vs_ours_findings.md"
+        elif "EDA & Baseline" in rep_choice:
             report_file = RESULTS_DIR / "baseline" / "eda_and_baseline_findings.md"
         else:
             report_file = RESULTS_DIR / "improved" / "fn_and_cost_findings.md"

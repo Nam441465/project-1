@@ -18,6 +18,7 @@ ENV/
 
 # Temporary and OS files
 *.tmp
+*.log
 .DS_Store
 Thumbs.db
 
@@ -39,6 +40,9 @@ results/baseline/*.npy
 results/baseline/models/*.joblib
 results/improved/*.npy
 results/improved/models/*.joblib
+results/paper_original/*.npy
+results/paper_original/models/*.joblib
+results/paper_original/k_cache/
 
 # Exception: Track all result metrics and summary CSVs/JSONs
 !results/**/summary_*.csv

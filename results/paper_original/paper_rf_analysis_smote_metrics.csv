@@ -1,0 +1,5 @@
+attack,condition,k,val_threshold,val_f1,cv_best_f1,test_accuracy,test_precision,test_recall,test_f1,TP,FP,FN,TN,n_estimators,min_samples_leaf,max_features,class_weight,selected_features,mi_time_sec,search_time_sec,train_time_sec,test_time_sec
+Analysis,smote,3,0.94,0.8812,0.9788,0.9997,0.9887,0.787,0.8764,351,4,95,346837,300,2,sqrt,,PROTOCOL;IN_BYTES;TCP_FLAGS,35.45,1104.1,58.48,0.58
+Analysis,smote,5,0.94,0.8407,0.9826,0.9996,0.8606,0.8027,0.8306,358,58,88,346783,400,2,sqrt,,L4_DST_PORT;PROTOCOL;IN_BYTES;OUT_BYTES;TCP_FLAGS,36.4,1350.21,86.7,0.82
+Analysis,smote,7,0.94,0.8676,0.9894,0.9997,0.9516,0.7937,0.8655,354,18,92,346823,400,1,sqrt,,L4_SRC_PORT;L4_DST_PORT;PROTOCOL;IN_BYTES;OUT_BYTES;OUT_PKTS;TCP_FLAGS,35.83,1677.23,92.48,0.87
+Analysis,smote,10,0.94,0.8818,0.9911,0.9997,0.9751,0.7892,0.8724,352,9,94,346832,400,1,sqrt,None,L4_SRC_PORT;L4_DST_PORT;PROTOCOL;L7_PROTO;IN_BYTES;OUT_BYTES;IN_PKTS;OUT_PKTS;TCP_FLAGS;FLOW_DURATION_MILLISECONDS,34.98,1928.88,106.57,0.94
