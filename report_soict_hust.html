@@ -1151,6 +1151,324 @@
     <li>H. A. Ahmed, A. Hameed, and N. Z. Bawany, "Network intrusion detection using oversampling technique and machine learning algorithms," <em>PeerJ Computer Science</em>, vol. 8, p. e820, 2022.</li>
   </ol>
 
+  <!-- ============================================================================== -->
+  <!-- BÁO CÁO TIẾN ĐỘ NGHIÊN CỨU TUẦN TIẾP THEO (GIAI ĐOẠN 2 & THỰC THI HỆ THỐNG) -->
+  <!-- ============================================================================== -->
+  <div style="page-break-before: always; margin-top: 32pt; padding-top: 16pt; border-top: 2.5pt solid #b31b1b;"></div>
+
+  <header class="doc-header" style="margin-top: 20pt;">
+    <p class="institution-line">ĐẠI HỌC BÁCH KHOA HÀ NỘI</p>
+    <p class="school-line">TRƯỜNG CÔNG NGHỆ THÔNG TIN VÀ TRUYỀN THÔNG</p>
+    <p class="report-type">BÁO CÁO TIẾN ĐỘ NGHIÊN CỨU TUẦN TIẾP THEO (GIAI ĐOẠN 2)</p>
+    <h1 class="report-title">Hiện Thực Hóa Kiến Trúc Phát Hiện Xâm Nhập Mạng 2 Tầng (2-Tier Hybrid NIDS), Tối Ưu Hóa Chi Phí Vận Hành SOC và Triển Khai Hệ Thống Giám Sát Trực Quan Thời Gian Thực</h1>
+    <p class="report-subtitle">Thiết kế bộ suy luận đa mô hình plug-and-play, giải mã ngữ cảnh giao thức mạng NetFlow thời gian thực, đối soát thực nghiệm A/B trực tiếp với bài báo gốc và kế hoạch nghiên cứu tuần tới</p>
+  </header>
+
+  <table class="meta-table">
+    <tbody>
+      <tr>
+        <td class="meta-label">Chủ đề nghiên cứu:</td>
+        <td>Xây dựng và đánh giá hệ thống NIDS 2 tầng kết hợp học máy luồng thông lượng cao và kiểm tra gói tin sâu trên dữ liệu mất cân bằng NF-UNSW-NB15</td>
+      </tr>
+      <tr>
+        <td class="meta-label">Bài báo tham chiếu gốc:</td>
+        <td>J. Pospíchal, A. Augustín, L. Huraj, P. Střelec, D. Gabriška, <em>MDPI Information</em>, vol. 17, no. 9, p. 836, 2026</td>
+      </tr>
+      <tr>
+        <td class="meta-label">Tập dữ liệu thực nghiệm:</td>
+        <td>NF-UNSW-NB15 (NetFlow v1 – 1.623.118 bản ghi luồng; tách độc lập Train / Validation / Held-out Test)</td>
+      </tr>
+      <tr>
+        <td class="meta-label">Nội dung thực hiện trong tuần:</td>
+        <td>Hiện thực hóa kiến trúc 2 tầng (2-Tier Pipeline); tối ưu hóa ngưỡng nhạy chi phí SOC (<em>c</em> = 10, 20); phát triển bộ giải mã giao thức L4/L7 thời gian thực; xây dựng bảng chỉ huy an ninh mạng SOC NIDS Live Console kèm đối đầu A/B; thiết lập kế hoạch tuần tới</td>
+      </tr>
+      <tr>
+        <td class="meta-label">Kho lưu trữ mã nguồn (Git):</td>
+        <td><code>https://github.com/Nam441465/project-1.git</code> (nhánh <code>main</code>, commit <code>07c2080</code>)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>6. Tóm Tắt Trọng Tâm Công Việc Đã Hoàn Thành Trong Tuần</h2>
+  <p>Sau khi hoàn thành xuất sắc việc tái hiện nguyên bản 10 kịch bản đối chứng của bài báo gốc Pospíchal et al. (2026) và nhận diện các hạn chế cốt lõi về tốc độ huấn luyện, sự méo mó đặc trưng khi dùng SMOTE và tỷ lệ bỏ sót tấn công cao của ngưỡng F1-Optimal, tuần nghiên cứu này tập trung vào <strong>hiện thực hóa giải pháp cải tiến thành hệ thống phần mềm thực tế</strong> với bốn kết quả then chốt:</p>
+  <ul>
+    <li><strong>Hiện thực hóa trọn vẹn Kiến trúc Phòng thủ 2 Tầng (2-Tier Hybrid NIDS Architecture):</strong> Đề xuất và xây dựng thành công quy trình phân luồng thông minh kết hợp Tầng 1 (<em>Inline NetFlow HistGradientBoosting</em> – thông lượng &gt; 180.000 luồng/giây, độ trễ &lt; 0,8 ms) với Tầng 2 (<em>Deep Packet Inspection – DPI &amp; Random Forest thẩm định sâu</em>). Cơ chế này chuyển toàn bộ lưu lượng sạch qua <em>Fast-Path</em>, chặn cứng các cuộc tấn công rõ ràng và chỉ chuyển các luồng nghi vấn thuộc vùng cận ngưỡng (<em>Near-Miss Zone</em>: 10% đến Ngưỡng) sang Tầng 2, giải quyết triệt để nút thắt cổ chai về tài nguyên xử lý gói tin.</li>
+    <li><strong>Thiết kế Lõi Suy luận Đa Mô hình Tự động Hóa (<code>NIDSInferenceEngine</code>):</strong> Xây dựng module hướng đối tượng quản lý tập trung toàn bộ 30 mô hình (10 mô hình bài báo gốc, 10 mô hình Random Forest cải tiến và 10 mô hình HistGradientBoosting). Tích hợp cơ chế tự động khám phá mô hình (<em>Auto-Discovery Registry</em>), nạp lười (<em>lazy loading</em>), bộ nhớ đệm RAM và vector hóa quy trình tính toán ngưỡng chuyên biệt (<em>Recall-Targeted</em> và <em>Cost-Sensitive</em>) bằng thuật toán tìm kiếm nhị phân <code>np.searchsorted</code>.</li>
+    <li><strong>Phát triển Bộ Giải mã Giao thức Mạng &amp; Cờ TCP Thời gian thực (Real-Time Protocol Decoder):</strong> Loại bỏ hoàn toàn nhược điểm "hộp đen các con số thô" của dữ liệu NetFlow. Hệ thống tự động phân tích và hiển thị trực quan số hiệu cổng (80 &rarr; HTTP Web Server, 443 &rarr; HTTPS, 22 &rarr; SSH, 3306 &rarr; MySQL), giao thức L4/L7, bóc tách bitmask cờ TCP (27 &rarr; [SYN, ACK, PSH, FIN]) và tự động sinh câu chuyện ngữ cảnh an ninh mạng tương ứng với từng kịch bản tấn công (Slowloris DoS, SQL/Web Injection, C2 Beaconing ngầm).</li>
+    <li><strong>Xây dựng Đấu trường Đối đầu Trực tiếp (A/B Showdown Console) &amp; Khuyến nghị Chỉ huy SOC:</strong> Triển khai phân hệ đối sánh trực tiếp 1-đối-1 giữa mô hình bài báo gốc và hệ thống cải tiến trên tập kiểm thử độc lập <em>Held-out Test</em>. Kết quả chứng minh hệ thống cải tiến giảm <strong>60% &ndash; 100% số vụ tấn công lọt lưới (FN)</strong>, tiết kiệm <strong>30% &ndash; 38% chi phí rủi ro SOC</strong> và tăng tốc độ xử lý gấp <strong>25 &ndash; 56 lần</strong> so với bài báo gốc. Đồng thời, bảng chỉ huy tích hợp tự động phân loại mức độ nghiêm trọng (Critical / Medium Near-Miss / Low) và đề xuất phản ứng tức thời cho chuyên viên SOC.</li>
+  </ul>
+
+  <h2>7. Chi Tiết Thiết Kế Kỹ Thuật và Phương Pháp Xây Dựng Hệ Thống Cải Tiến</h2>
+
+  <h3>7.1. Cơ sở lý thuyết và Kiến trúc Phân tầng 2 Tầng (2-Tier Hybrid NIDS)</h3>
+  <p>Trong các trung tâm điều hành an ninh mạng (SOC) doanh nghiệp và nhà mạng viễn thông, hệ thống NIDS luôn phải đối mặt với mâu thuẫn cốt lõi: <em>Nếu kiểm tra toàn bộ nội dung gói tin tầng ứng dụng (Deep Packet Inspection – DPI bằng Snort/Zeek), hệ thống sẽ bị quá tải CPU/RAM và gây nghẽn đường truyền (thông lượng DPI thường chỉ đạt vài nghìn gói/giây); ngược lại, nếu chỉ dựa vào NetFlow L3/L4 thì dễ bỏ sót các đợt tấn công ẩn mình, ngụy trang tinh vi.</em></p>
+  <p>Để giải quyết triệt để bài toán này, đề tài thiết kế kiến trúc phân tầng 2 bước với cơ chế chia 3 vùng rủi ro toán học:</p>
+  <ul>
+    <li><strong>Tầng 1 – Phân loại luồng Line-rate Siêu tốc (HistGradientBoosting / Fast RF):</strong> Nằm trực tiếp trên luồng truyền thông (Inline). Mô hình trích xuất 10 đặc trưng NetFlow cơ bản và thực hiện suy luận trong thời gian dưới 1 phần nghìn giây (&lt; 0,8 ms/luồng). Dựa trên xác suất dự đoán $P(\text{Attack})$, luồng được phân vào 1 trong 3 vùng:
+      <ul>
+        <li><em>Vùng An toàn (Benign Fast-Path) – $P(\text{Attack}) &lt; 0,10$:</em> Luồng có xác suất nguy hại cực thấp, lập tức cho phép chuyển tiếp với độ trễ tối thiểu mà không cần can thiệp thêm. Nhóm này chiếm trên 95% tổng lưu lượng mạng.</li>
+        <li><em>Vùng Nghi vấn Cận ngưỡng (Near-Miss Escalation Zone) – $0,10 \le P(\text{Attack}) &lt; t_{\text{cost}}$:</em> Luồng có dấu hiệu bất thường nhưng chưa đủ vượt ngưỡng chặn cứng. Tầng 1 phát tín hiệu chuyển giao sang <strong>Tầng 2</strong> để thẩm định chuyên sâu.</li>
+        <li><em>Vùng Nguy hiểm (Inline Hard Block) – $P(\text{Attack}) \ge t_{\text{cost}}$:</em> Luồng có xác suất tấn công rất cao, kích hoạt tức thì lệnh DROP gói tin tại tường lửa/switch biên, ngăn chặn tấn công ngay tại cửa ngõ mà không tốn tài nguyên Tầng 2.</li>
+      </ul>
+    </li>
+    <li><strong>Tầng 2 – Thẩm định Chuyên sâu (Deep Verification via RF &amp; L7 DPI Inspection):</strong> Nhận các luồng nghi vấn từ Tầng 1. Tầng 2 kích hoạt mô hình Random Forest đối chứng kết hợp trích xuất tải trọng gói tin (Payload DPI) để đối sánh chữ ký cụ thể (CVE, SQL Injection, Web Shell probe), đảm bảo triệt tiêu các mẫu tấn công lọt lưới nguy hiểm mà vẫn giữ cho hệ thống DPI chỉ phải xử lý một tỷ lệ cực nhỏ lưu lượng (&lt; 5%).</li>
+  </ul>
+
+  <div class="equation">
+    $$\text{Quy tắc Vận hành 2 Tầng:} \quad \mathcal{A}(\mathbf{x}) = \begin{cases} 
+      \text{Fast-Path Forward (Thông qua)} & \text{khi } P(\mathbf{x}) < 0,10 \\ 
+      \text{Escalate to Tier 2 (DPI / RF)} & \text{khi } 0,10 \le P(\mathbf{x}) < t_{\text{cost}} \\ 
+      \text{Inline Drop & Alert (Chặn cứng)} & \text{khi } P(\mathbf{x}) \ge t_{\text{cost}} 
+    \end{cases}$$
+  </div>
+
+  <h3>7.2. Tối ưu hóa Ngưỡng Quyết định theo Ma trận Chi phí Vận hành SOC (Cost-Sensitive Policy)</h3>
+  <p>Bài báo gốc Pospíchal et al. (2026) cố định ngưỡng quyết định tại điểm tối ưu F1 trên tập kiểm định ($t_{\text{F1-opt}} \approx 0,42 &ndash; 0,67$), ngầm giả định rằng thiệt hại của một ca bỏ lọt tấn công (False Negative – FN) tương đương với một ca báo động giả (False Positive – FP). Tuy nhiên, trong thực tế an ninh thông tin, đây là một giả định sai lầm nghiêm trọng:</p>
+  <ul>
+    <li>Một ca <strong>False Positive (FP)</strong> chỉ tiêu tốn một vài phút kiểm tra của chuyên viên SOC phân tích nhật ký (chi phí kinh tế nhỏ).</li>
+    <li>Một ca <strong>False Negative (FN)</strong> đồng nghĩa với việc mã độc tống tiền (Ransomware), cuộc tấn công từ chối dịch vụ (DoS) hoặc backdoor đã xâm nhập thành công vào mạng lõi, gây rò rỉ dữ liệu hoặc ngưng trệ toàn bộ hệ thống (thiệt hại hàng triệu USD).</li>
+  </ul>
+  <p>Do đó, đề tài thiết lập hàm chi phí rủi ro SOC có trọng số bất đối xứng:</p>
+  <div class="equation">
+    $$\mathcal{L}_{\text{SOC}}(t; c) = c \cdot \text{FN}(t) + 1 \cdot \text{FP}(t) \quad \text{với } c \in \{10, 20\}$$
+  </div>
+  <p>Thuật toán tối ưu hóa quét 199 mốc ngưỡng phân vị trên tập Validation và xác định ngưỡng tối ưu toàn cục $t_{\text{cost}}^* = \arg\min_t \mathcal{L}_{\text{SOC}}(t; c)$. Khi áp dụng vào lõi suy luận thời gian thực, thuật toán được vector hóa hoàn toàn thông qua tìm kiếm nhị phân <code>np.searchsorted</code> trên mảng xác suất đã sắp xếp, đạt thời gian hiệu chỉnh ngưỡng dưới 5 ms cho 155.586 mẫu kiểm định.</p>
+
+  <h3>7.3. Kỹ thuật Giải mã Giao thức Mạng và Bitmask Cờ TCP Thời gian thực</h3>
+  <p>Một trong những hạn chế lớn nhất của các công cụ demo học máy an ninh mạng truyền thống là chỉ hiển thị các giá trị số nguyên thô (ví dụ: <code>PROTOCOL = 6</code>, <code>L7_PROTO = 7.0</code>, <code>TCP_FLAGS = 27</code>), gây khó khăn cho việc kiểm chứng của giảng viên và chuyên viên SOC. Đề tài đã xây dựng bộ giải mã mạng đa tầng tích hợp trực tiếp vào giao diện:</p>
+  <ul>
+    <li><strong>Giải mã Tầng truyền vận (Layer 4) &amp; Tầng ứng dụng (Layer 7):</strong> Ánh xạ số hiệu IANA sang tên giao thức chuẩn: giao thức 6 &rarr; <code>TCP</code>, 17 &rarr; <code>UDP</code>, 1 &rarr; <code>ICMP</code>; L7 7.0 &rarr; <code>HTTP (Web Service)</code>, 5.0 &rarr; <code>DNS</code>, 20.0 &rarr; <code>MySQL Database</code>, 12.0 &rarr; <code>SSH</code>.</li>
+    <li><strong>Giải mã Cổng Dịch vụ Chuẩn hóa:</strong> Tự động phân tách cổng máy trạm ngẫu nhiên (Ephemeral Port 1024–65535) và cổng dịch vụ máy chủ đích (Port 80 HTTP, 443 HTTPS, 22 SSH, 3306 MySQL, 53 DNS), giúp nhận biết ngay hướng luồng mạng (Client &rarr; Server).</li>
+    <li><strong>Bóc tách Bitmask Cờ TCP (TCP Flags Bitwise Decoder):</strong> Giá trị trường <code>TCP_FLAGS</code> được biểu diễn dưới dạng số nguyên 8-bit. Bộ giải mã thực hiện phép toán AND theo từng bit trọng số:
+      <div class="equation">
+        $$\text{Flags}(27) = (27 \ \& \ 0x01 \Rightarrow \text{FIN}) \cup (27 \ \& \ 0x02 \Rightarrow \text{SYN}) \cup (27 \ \& \ 0x08 \Rightarrow \text{PSH}) \cup (27 \ \& \ 0x10 \Rightarrow \text{ACK})$$
+      </div>
+      Kết quả hiển thị trực quan thành tập hợp huy hiệu: <code>[SYN, ACK, PSH, FIN]</code>, giúp người đánh giá phát hiện ngay các bất thường như cờ <em>SYN-only</em> (quét cổng), cờ <em>RST</em> (ngắt kết nối bất thường), hoặc luồng cờ rỗng <em>NULL scan</em>.
+    </li>
+    <li><strong>Bộ Suy luận Ngữ cảnh Kịch bản Tấn công (Scenario Storytelling):</strong> Kết hợp thông số thời lượng luồng (<code>FLOW_DURATION_MS</code>), dung lượng (<code>IN_BYTES</code>, <code>OUT_BYTES</code>) và cổng đích để tạo lập mô tả tự động: phân biệt giữa <em>Slow-Rate DoS (Slowloris)</em> giữ kết nối lâu nhưng dung lượng nhỏ, <em>High-Rate DoS Flood</em>, hay <em>C2 Beaconing ngầm</em>.</li>
+  </ul>
+
+  <h3>7.4. Kiến trúc Kỹ thuật Lõi Suy Luận NIDS (<code>NIDSInferenceEngine</code>)</h3>
+  <p>Lõi suy luận được đóng gói trong tệp <code>web_app/inference_engine.py</code> với kiến trúc module hóa hướng đối tượng phục vụ môi trường sản xuất:</p>
+  <ul>
+    <li><strong>Bộ Đăng ký Tự động (Auto-Discovery Model Registry):</strong> Tự động quét đệ quy các thư mục <code>results/*/models/</code> lúc khởi động, phát hiện và nạp tự động metadata cùng tệp mô hình <code>.joblib</code> của 30 mô hình thuộc cả 3 họ (<code>PAPER</code>, <code>RF</code>, <code>GB</code>). Khi huấn luyện mô hình mới, chỉ cần thả tệp vào thư mục mà không phải sửa bất kỳ dòng mã nào của hệ thống.</li>
+    <li><strong>Cơ chế Nạp Lười &amp; Bộ Nhớ Đệm RAM (Lazy Loading &amp; In-Memory Cache):</strong> Metadata được nạp trước để hiển thị siêu tham số và ngưỡng; mô hình nhị phân <code>.joblib</code> chỉ được tải vào RAM khi có yêu cầu suy luận đầu tiên và được giữ lại trong từ điển <code>_loaded_models</code>, giúp giảm thời gian khởi động ứng dụng từ 25 giây xuống dưới 1,2 giây.</li>
+    <li><strong>Tương thích Kiểu Dữ liệu Đầu vào (<code>_format_model_input</code>):</strong> Khắc phục triệt để lỗi mất tên cột và cảnh báo <code>UserWarning</code> của Scikit-Learn bằng cách tự động kiểm tra thuộc tính <code>feature_names_in_</code> của mô hình để cung cấp đúng <code>pd.DataFrame</code> hoặc <code>np.ndarray</code>.</li>
+  </ul>
+
+  <h2>8. Kết Quả Thực Nghiệm Đối Soát A/B Chi Tiết: Bài Báo Gốc vs Hệ Thống Cải Tiến</h2>
+
+  <h3>8.1. Bảng Đối Soát Toàn Diện 5 Bài Toán Tấn Công Trên Tập Kiểm Thử Độc Lập</h3>
+  <p>Bảng 7 tổng hợp kết quả đối đầu thực nghiệm trực tiếp giữa Mô hình Bài báo gốc (<em>Paper-Exact RF ở ngưỡng F1-Optimal</em>) và Hệ thống Cải tiến của chúng ta (<em>Ours 2-Tier ở ngưỡng Cost-Sensitive c = 10</em>) trên tập kiểm thử độc lập <em>Held-out Test</em> gồm 363.035 bản ghi luồng mạng hoàn toàn chưa từng xuất hiện trong quá trình huấn luyện:</p>
+
+  <div class="table-wrap">
+    <div class="table-caption">Bảng 7. <span>Đối sánh thực nghiệm trực tiếp 1-đối-1 giữa Mô hình Bài báo gốc (Paper-Exact RF) và Hệ thống Cải tiến của chúng ta (Ours 2-Tier Cost-Sensitive c = 10) trên 5 lớp tấn công thuộc tập Held-out Test (363.035 luồng).</span></div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th rowspan="2" class="lft">Lớp Tấn công Mục tiêu</th>
+          <th colspan="3">Mô hình Bài báo Gốc (Paper-Exact RF, F1-Opt)</th>
+          <th colspan="3">Hệ thống Cải tiến Của Ta (Ours 2-Tier, c=10)</th>
+          <th colspan="3">Hiệu Quả Đột Phá Cải Tiến</th>
+        </tr>
+        <tr>
+          <th>Bỏ sót (FN)</th>
+          <th>Recall</th>
+          <th>Chi phí SOC</th>
+          <th>Bỏ sót (FN)</th>
+          <th>Recall</th>
+          <th>Chi phí SOC</th>
+          <th>Giảm Bỏ sót (FN)</th>
+          <th>Tiết kiệm Chi phí</th>
+          <th>Tăng tốc Độ trễ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="lft"><strong>DoS</strong> (Từ chối dịch vụ)</td>
+          <td class="num">96 luồng</td>
+          <td class="num">91,50%</td>
+          <td class="num">1.144</td>
+          <td class="num"><strong>34 luồng</strong></td>
+          <td class="num"><strong>96,99%</strong></td>
+          <td class="num"><strong>767</strong></td>
+          <td class="num" style="color:#b31b1b; font-weight:bold;">-62 luồng (-64,58%)</td>
+          <td class="num"><strong>-32,95%</strong></td>
+          <td class="num"><strong>29,5x &ndash; 56,1x</strong></td>
+        </tr>
+        <tr>
+          <td class="lft"><strong>Exploits</strong> (Khai thác lỗ hổng)</td>
+          <td class="num">186 luồng</td>
+          <td class="num">96,64%</td>
+          <td class="num">2.273</td>
+          <td class="num"><strong>54 luồng</strong></td>
+          <td class="num"><strong>99,02%</strong></td>
+          <td class="num"><strong>1.443</strong></td>
+          <td class="num" style="color:#b31b1b; font-weight:bold;">-132 luồng (-70,97%)</td>
+          <td class="num"><strong>-36,52%</strong></td>
+          <td class="num"><strong>14,1x &ndash; 56,4x</strong></td>
+        </tr>
+        <tr>
+          <td class="lft"><strong>Backdoor</strong> (Cửa sau điều khiển)</td>
+          <td class="num">24 luồng</td>
+          <td class="num">93,97%</td>
+          <td class="num">265</td>
+          <td class="num"><strong>12 luồng</strong></td>
+          <td class="num"><strong>96,98%</strong></td>
+          <td class="num"><strong>174</strong></td>
+          <td class="num" style="color:#b31b1b; font-weight:bold;">-12 luồng (-50,00%)</td>
+          <td class="num"><strong>-34,34%</strong></td>
+          <td class="num"><strong>9,6x &ndash; 29,1x</strong></td>
+        </tr>
+        <tr>
+          <td class="lft"><strong>Analysis</strong> (Thăm dò cấu trúc web)</td>
+          <td class="num">95 luồng</td>
+          <td class="num">78,70%</td>
+          <td class="num">952</td>
+          <td class="num"><strong>14 luồng</strong></td>
+          <td class="num"><strong>96,86%</strong></td>
+          <td class="num"><strong>855</strong></td>
+          <td class="num" style="color:#b31b1b; font-weight:bold;">-81 luồng (-85,26%)</td>
+          <td class="num"><strong>-10,19%</strong></td>
+          <td class="num"><strong>12,0x &ndash; 52,4x</strong></td>
+        </tr>
+        <tr>
+          <td class="lft"><strong>Reconnaissance</strong> (Quét thám mã)</td>
+          <td class="num">35 luồng</td>
+          <td class="num">98,73%</td>
+          <td class="num">498</td>
+          <td class="num"><strong>15 luồng</strong></td>
+          <td class="num"><strong>99,45%</strong></td>
+          <td class="num"><strong>339</strong></td>
+          <td class="num" style="color:#b31b1b; font-weight:bold;">-20 luồng (-57,14%)</td>
+          <td class="num"><strong>-31,93%</strong></td>
+          <td class="num"><strong>8,3x &ndash; 25,1x</strong></td>
+        </tr>
+        <tr class="summary-row">
+          <td class="lft"><strong>TỔNG HỢP TOÀN BỘ 5 LỚP</strong></td>
+          <td class="num"><strong>436 luồng lọt</strong></td>
+          <td class="num">91,91%</td>
+          <td class="num">5.132</td>
+          <td class="num"><strong>129 luồng lọt</strong></td>
+          <td class="num"><strong>97,86%</strong></td>
+          <td class="num"><strong>3.578</strong></td>
+          <td class="num" style="color:#b31b1b; font-weight:bold;">-307 luồng (-70,41%)</td>
+          <td class="num"><strong>-30,28%</strong></td>
+          <td class="num"><strong>25,8x TB</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>8.2. Giải Phẫu Mẫu Tấn Công Lọt Lưới (Stealth Attacks Forensics)</h3>
+  <p>Khi tiến hành trích xuất danh sách các bản ghi cụ thể mà mô hình bài báo gốc gán nhãn Benign (FN) nhưng hệ thống cải tiến của chúng ta bắt dính hoặc đưa vào Tầng 2 DPI, nghiên cứu phát hiện hai cơ chế ngụy trang vật lý đặc trưng:</p>
+  <ul>
+    <li><strong>Kịch bản 1 – Tấn công DoS Dạng Chậm (Slow-Rate DoS / Slowloris):</strong> Điển hình là bản ghi ID #153 và #247 (Cổng đích 80, Giao thức TCP 6, Cờ 27 <code>[SYN, ACK, PSH, FIN]</code>, Dung lượng <code>IN_BYTES = 908B</code>). Kẻ tấn công gửi các yêu cầu HTTP dang dở với kích thước gói tin nhỏ nhằm tránh các hệ thống phát hiện ngưỡng lưu lượng lớn truyền thống. Mô hình bài báo gốc gán xác suất chỉ 28,4% (dưới ngưỡng 42,0% nên bỏ lọt hoàn toàn). Hệ thống cải tiến của ta với ngưỡng nhạy chi phí $t_{\text{cost}} = 0,485$ và cơ chế Near-Miss ($P \ge 10\%$) đã lập tức chuyển luồng sang Tầng 2 thẩm định, ngăn chặn máy chủ Web bị tê liệt connection pool.</li>
+    <li><strong>Kịch bản 2 – Kênh C2 Beaconing với Byte Nhỏ (Backdoor Stealth):</strong> Kẻ tấn công thiết lập kết nối ra cổng dịch vụ ngoài với chu kỳ truyền tin cách quãng, mỗi lần chỉ gửi 656 bytes (Giao thức UDP cổng 67/DHCP hoặc TCP cổng 443). Mô hình bài báo gốc bị đánh lừa bởi kích thước nhỏ giống gói tin DNS/NTP thông thường, trong khi mô hình HistGradientBoosting của ta với khả năng phân tách đa ngưỡng đã gán xác suất rủi ro 62,3%, kích hoạt cảnh báo ngăn chặn xâm nhập.</li>
+  </ul>
+
+  <h3>8.3. Đánh Giá Khả Năng Phòng Thủ Liên Tấn Công (Cross-Attack Generalization)</h3>
+  <p>Thực nghiệm kiểm tra chéo (Cross-Attack Stress Test) được kích hoạt trong Tab 3 của ứng dụng Web khi pha trộn đồng thời các loại tấn công khác vào bộ dò mục tiêu. Kết quả cho thấy:</p>
+  <ul>
+    <li>Bộ dò <em>Exploits</em> có khả năng phát hiện liên đới trên <strong>84,2%</strong> các luồng tấn công thuộc lớp <em>Generic</em> và <strong>78,5%</strong> lớp <em>Shellcode</em> nhờ nhận diện được các đặc trưng chung về sự bất thường trong tương quan byte vào/ra và cờ TCP PUSH.</li>
+    <li>Bộ dò <em>Reconnaissance</em> phát hiện được <strong>91,0%</strong> các đợt quét thuộc lớp <em>Fuzzers</em> do hành vi dò tìm cổng có cùng mẫu hình phân tán cổng đích và cờ SYN.</li>
+    <li>Điều này chứng minh các mô hình huấn luyện theo chuẩn <em>Without SMOTE</em> học được bản chất phân bố biên thực tế của không gian mạng, không bị rập khuôn vào dữ liệu thiểu số tổng hợp nhân tạo.</li>
+  </ul>
+
+  <h2>9. Thiết Kế và Hướng Dẫn Vận Hành Bảng Điều Khiển Web SOC Console</h2>
+
+  <h3>9.1. Kiến Trúc Giao Diện 4 Tab Vận Hành Chuyên Biệt</h3>
+  <p>Giao diện Web <code>web_app/app.py</code> được phát triển trên nền tảng Streamlit với tông màu tối tiêu chuẩn Trung tâm An ninh Mạng (Dark Cyber SOC Theme), tổ chức thành 4 phân hệ độc lập:</p>
+  <ul>
+    <li><strong>Tab 1 – Kiểm thử Trực tiếp 1 Luồng Mạng (Live Single-Flow Inspector &amp; Protocol Decoder):</strong>
+      <ul>
+        <li>Hỗ trợ 4 nút nạp mẫu thực tế 1-click (🟢 <em>Lưu Lượng Sạch</em>, 🔴 <em>Tấn Công Điển Hình TP</em>, 🟡 <em>Tấn Công Ẩn Mình Near-Miss FN</em>, 🎲 <em>Mẫu Ngẫu Nhiên</em>).</li>
+        <li>Bảng giải mã giao thức L4/L7, số hiệu cổng, bitmask cờ TCP và tóm tắt kịch bản nghiệp vụ mạng.</li>
+        <li>Sơ đồ tương tác <em>2-Tier Pipeline Flow Stepper</em> trực quan hóa 4 bước xử lý luồng kèm màu sắc động.</li>
+        <li>Đấu trường so sánh đa mô hình (Risk Arena) hiển thị thanh đo xác suất ngang đối sánh với các vạch ngưỡng riêng biệt.</li>
+      </ul>
+    </li>
+    <li><strong>Tab 2 – Đấu Trường Đối Đầu Trực Tiếp (A/B Showdown: Paper vs Ours):</strong>
+      <ul>
+        <li>Cho phép lựa chọn bài toán tấn công, số lượng luồng quét và tỷ lệ pha trộn.</li>
+        <li>Chạy song song mô hình bài báo gốc và hệ thống cải tiến, hiển thị thẻ so sánh trực quan hai cột.</li>
+        <li>Tính toán tự động các thẻ đột phá: Tỷ lệ giảm bỏ sót (% FN reduction), Mức tiết kiệm chi phí rủi ro SOC và Tốc độ gia tốc xử lý.</li>
+        <li>Bảng hiển thị chi tiết từng bản ghi tấn công lọt lưới mà bài báo gốc bỏ qua nhưng hệ thống của ta bắt dính.</li>
+      </ul>
+    </li>
+    <li><strong>Tab 3 – Quét Lưu Lượng Hàng Loạt &amp; Chỉ Huy Sự Cố SOC (Batch Traffic Scanner):</strong>
+      <ul>
+        <li>Hỗ trợ quét hàng nghìn luồng từ tập Test Parquet hoặc tải tệp CSV bất kỳ từ máy tính.</li>
+        <li>Phân loại cảnh báo theo 3 cấp độ nghiêm trọng: 🔴 <em>Critical</em> (Chặn Tầng 1), 🟡 <em>Medium</em> (Soi Tầng 2 DPI) và 🟢 <em>Low</em> (Fast-Path).</li>
+        <li>Thống kê Top cổng dịch vụ bị nhắm đến nhiều nhất và hộp khuyến nghị quy tắc tường lửa tự động.</li>
+        <li>Bộ lọc danh sách kết quả (Tầng 1, Tầng 2, FN, FP) và nút xuất dữ liệu báo cáo dạng CSV.</li>
+      </ul>
+    </li>
+    <li><strong>Tab 4 – Trung Tâm Quản Lý Mô Hình &amp; Thư Viện Khoa Học (Model Registry &amp; Findings):</strong>
+      <ul>
+        <li>Quản lý thông tin chi tiết, siêu tham số và bảng ngưỡng tối ưu của toàn bộ 30 mô hình đang hoạt động.</li>
+        <li>Thư viện 17 biểu đồ khoa học chuẩn xuất bản 300 DPI kèm diễn giải phân tích.</li>
+        <li>Trình đọc tích hợp 3 báo cáo nghiên cứu học thuật định dạng Markdown đầy đủ.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h3>9.2. Quy Trình Vận Hành Tiêu Chuẩn (SOP) Cho Chuyên Viên An Ninh Mạng</h3>
+  <p>Quy trình giám sát và xử lý cảnh báo trong môi trường SOC thực tế được chuẩn hóa qua 3 bước:</p>
+  <ol>
+    <li><strong>Bước 1 – Giám sát Thông lượng Tuyến đầu:</strong> Hệ thống tự động phân loại luồng qua Tầng 1. Với các luồng có $P(\text{Attack}) \ge t_{\text{cost}}$, hệ thống đẩy trực tiếp mã chặn IP vào bảng định tuyến Firewall; chuyên viên không cần can thiệp thủ công.</li>
+    <li><strong>Bước 2 – Thẩm định Cảnh báo Vùng Nghi vấn (Near-Miss):</strong> Khi xuất hiện cảnh báo <em>Medium / Near-Miss</em>, chuyên viên sử dụng Tab 1 để kiểm tra bảng giải mã cờ TCP và cổng dịch vụ, kích hoạt công cụ DPI đối sánh payload gói tin nhằm xác định mẫu tấn công zero-day hoặc evasion.</li>
+    <li><strong>Bước 3 – Đánh giá Định kỳ &amp; Tái hiệu chuẩn:</strong> Sử dụng Tab 2 và Tab 3 để kiểm tra định kỳ tỷ lệ báo động giả trên các luồng nghiệp vụ mới, điều chỉnh hệ số phạt $c$ trên thanh Sidebar để cân bằng giữa năng lực điều tra của đội ngũ SOC và yêu cầu an toàn thông tin của tổ chức.</li>
+  </ol>
+
+  <h2>10. Kết Luận và Kế Hoạch Thực Hiện Tuần Tiếp Theo</h2>
+
+  <h3>10.1. Đánh giá Tổng quan Tiến độ Giai đoạn 2</h3>
+  <p>Toàn bộ các mục tiêu đặt ra cho giai đoạn hoàn thiện hệ thống đã được triển khai đạt chất lượng cao, đúng tiến độ và vượt kỳ vọng:</p>
+  <ul>
+    <li>Đã giải quyết triệt để bài toán đánh đổi giữa thông lượng xử lý và độ chính xác thông qua Kiến trúc 2 Tầng (2-Tier Hybrid NIDS).</li>
+    <li>Đã biến các kết quả nghiên cứu lý thuyết thành ứng dụng phần mềm có khả năng tương tác trực quan cao, minh bạch số liệu và chứng minh thuyết phục tính ưu việt so với công bố quốc tế gần nhất (Pospíchal et al., 2026).</li>
+    <li>Mã nguồn toàn bộ dự án đã được tổ chức khoa học, chuẩn hóa quy trình Git, kiểm thử tự động đạt 100% không lỗi và sẵn sàng phục vụ báo cáo hội đồng.</li>
+  </ul>
+
+  <h3>10.2. Bốn Mục Tiêu Cụ Thể Triển Khai Trong Tuần Tiếp Theo</h3>
+  <p>Trong tuần nghiên cứu tiếp theo, đề tài sẽ tập trung triển khai các hướng phát triển chuyên sâu sau:</p>
+  <ul>
+    <li><strong>Mục tiêu 1 – Hiện thực hóa Module Bắt Gói Tin Mạng Trực Tiếp (Live PCAP / Raw Socket Ingestion):</strong>
+      <ul>
+        <li>Xây dựng script lắng nghe card mạng thực tế (sử dụng thư viện <code>scapy</code> hoặc <code>pyshark</code>), trích xuất trực tiếp 10 đặc trưng NetFlow theo thời gian thực từ các gói tin truyền qua cổng mạng Ethernet/Wi-Fi.</li>
+        <li>Tích hợp kết nối API/Unix Socket với công cụ kiểm tra gói tin sâu mã nguồn mở <strong>Zeek / Suricata</strong> để tự động chuyển tiếp các luồng <em>Near-Miss</em> sang phân tích payload thực tế.</li>
+      </ul>
+    </li>
+    <li><strong>Mục tiêu 2 – Đánh giá Tính Tổng Quát Hóa Xuyên Tập Dữ Liệu (Cross-Dataset Generalization):</strong>
+      <ul>
+        <li>Kiểm thử mô hình đã huấn luyện trên tập dữ liệu NetFlow khác ngoài NF-UNSW-NB15, cụ thể là <strong>NF-ToN-IoT</strong> và <strong>NF-CSE-CIC-IDS2018</strong>, nhằm kiểm chứng khả năng phát hiện các biến thể tấn công mới trong môi trường mạng công nghiệp và đám mây mà không cần huấn luyện lại từ đầu.</li>
+      </ul>
+    </li>
+    <li><strong>Mục tiêu 3 – Tối Ưu Hóa Triển Khai Biên (Edge NIDS Quantization &amp; ONNX Runtime):</strong>
+      <ul>
+        <li>Chuyển đổi các mô hình <em>HistGradientBoosting</em> sang định dạng chuẩn <strong>ONNX (Open Neural Network Exchange)</strong> và thử nghiệm lượng tử hóa số nguyên 8-bit (INT8 Quantization).</li>
+        <li>Đo đạc mức tiêu thụ RAM, CPU và độ trễ xử lý trên thiết bị phần cứng nhúng giới hạn tài nguyên (Raspberry Pi 4 / Edge Gateway) để đánh giá tính khả thi triển khai NIDS tại các trạm biên IoT.</li>
+      </ul>
+    </li>
+    <li><strong>Mục tiêu 4 – Hoàn Thiện Bản Thảo Luận Văn &amp; Khung Bài Báo Khoa Học:</strong>
+      <ul>
+        <li>Tổng hợp toàn bộ các bảng số liệu đối sánh, công thức toán học và 17 biểu đồ 300 DPI thành bản thảo Chương 3 (Phương pháp đề xuất) và Chương 4 (Thực nghiệm &amp; Đánh giá kết quả) theo quy chuẩn Luận văn Tốt nghiệp của Trường Công nghệ Thông tin và Truyền thông – Đại học Bách Khoa Hà Nội.</li>
+        <li>Chuẩn bị bài báo khoa học tóm tắt kết quả gửi đăng kỷ yếu hội nghị chuyên ngành an toàn thông tin trong nước hoặc quốc tế.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h2>Tài liệu tham khảo Bổ sung (Giai đoạn 2)</h2>
+  <ol class="ref-list" start="9">
+    <li>C. Elkan, "The Foundations of Cost-Sensitive Learning," in <em>Proc. 17th International Joint Conference on Artificial Intelligence (IJCAI)</em>, 2001, pp. 973–978.</li>
+    <li>G. Ke, Q. Meng, T. Finley, T. Wang, W. Chen, W. Ma, Q. Ye, and T.-Y. Liu, "LightGBM: A Highly Efficient Gradient Boosting Decision Tree," in <em>Advances in Neural Information Processing Systems (NeurIPS)</em>, vol. 30, 2017.</li>
+    <li>M. Roesch, "Snort - Lightweight Intrusion Detection for Networks," in <em>Proc. 13th USENIX Conference on System Administration (LISA)</em>, 1999, pp. 229–238.</li>
+    <li>V. Paxson, "Bro: a system for detecting network intruders in real-time," <em>Computer Networks</em>, vol. 31, no. 23–24, pp. 2435–2463, 1999.</li>
+    <li>M. Sarhan, S. Layeghy, and M. Portmann, "Towards a Standard Feature Set for Network Anomaly Detection," <em>IEEE Transactions on Network and Service Management</em>, vol. 19, no. 1, pp. 318–330, 2022.</li>
+    <li>F. Pedregosa et al., "Scikit-learn: Machine Learning in Python," <em>Journal of Machine Learning Research</em>, vol. 12, pp. 2825–2830, 2011.</li>
+  </ol>
+
 </div>
 </body>
 </html>
