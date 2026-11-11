@@ -7,7 +7,7 @@
 <style>
   @page {
     size: A4 portrait;
-    margin: 16mm 16mm 16mm 20mm;
+    margin: 20mm 20mm 20mm 30mm;
   }
 
   * {
@@ -22,24 +22,24 @@
     background: #ffffff;
     color: #000000;
     font-family: "Times New Roman", Times, Georgia, serif;
-    font-size: 11.5pt;
-    line-height: 1.45;
+    font-size: 13pt;
+    line-height: 1.5;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
   .report-container {
-    max-width: 190mm;
+    max-width: 175mm;
     margin: 0 auto;
-    padding: 12mm 6mm 16mm 6mm;
+    padding: 10mm 4mm 15mm 4mm;
     background: #ffffff;
     color: #000000;
   }
 
   @media print {
     html, body {
-      font-size: 10.5pt;
-      line-height: 1.38;
+      font-size: 13pt;
+      line-height: 1.5;
       background: #ffffff;
       color: #000000;
     }
@@ -53,52 +53,52 @@
   /* Phần tiêu đề đầu trang: nền trắng, căn giữa chuẩn mực, không khung hộp */
   .doc-header {
     text-align: center;
-    margin-bottom: 14pt;
+    margin-bottom: 16pt;
   }
 
   .institution-line {
-    font-size: 11pt;
+    font-size: 12pt;
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.3px;
     color: #000000;
-    margin: 0 0 2pt 0;
+    margin: 0 0 3pt 0;
     text-align: center;
   }
 
   .school-line {
-    font-size: 11pt;
+    font-size: 12pt;
     font-weight: bold;
     text-transform: uppercase;
     color: #000000;
-    margin: 0 0 11pt 0;
+    margin: 0 0 12pt 0;
     text-align: center;
   }
 
   .report-type {
-    font-size: 11pt;
+    font-size: 12pt;
     font-weight: bold;
     text-transform: uppercase;
     color: #000000;
-    margin: 0 0 6pt 0;
+    margin: 0 0 8pt 0;
     text-align: center;
   }
 
   h1.report-title {
-    font-size: 14.5pt;
+    font-size: 16pt;
     font-weight: bold;
     text-transform: uppercase;
     color: #b31b1b;
-    line-height: 1.34;
-    margin: 0 0 7pt 0;
+    line-height: 1.35;
+    margin: 0 0 8pt 0;
     text-align: center;
   }
 
   .report-subtitle {
-    font-size: 11pt;
+    font-size: 12pt;
     font-style: italic;
     color: #000000;
-    margin: 0 0 12pt 0;
+    margin: 0 0 14pt 0;
     text-align: center;
   }
 
@@ -106,13 +106,13 @@
   .meta-table {
     width: 100%;
     border: none;
-    margin: 0 0 12pt 0;
-    font-size: 10.5pt;
-    line-height: 1.42;
+    margin: 0 0 14pt 0;
+    font-size: 12pt;
+    line-height: 1.5;
   }
 
   .meta-table td {
-    padding: 1.5pt 0;
+    padding: 2pt 0;
     border: none;
     vertical-align: top;
     color: #000000;
@@ -120,19 +120,19 @@
   }
 
   .meta-table td.meta-label {
-    width: 148pt;
+    width: 160pt;
     font-weight: bold;
     white-space: nowrap;
-    padding-right: 8pt;
+    padding-right: 10pt;
   }
 
   /* Tiêu đề mục lớn chữ đỏ, tiểu mục chữ đen, không đường kẻ ngang */
   h2 {
-    font-size: 12.5pt;
+    font-size: 14pt;
     font-weight: bold;
     text-transform: uppercase;
     color: #b31b1b;
-    margin: 15pt 0 6pt 0;
+    margin: 20pt 0 8pt 0;
     padding: 0;
     border: none;
     break-after: avoid;
@@ -140,10 +140,10 @@
   }
 
   h3 {
-    font-size: 11.5pt;
+    font-size: 13pt;
     font-weight: bold;
     color: #000000;
-    margin: 10pt 0 4pt 0;
+    margin: 14pt 0 6pt 0;
     padding: 0;
     border: none;
     break-after: avoid;
@@ -151,28 +151,28 @@
   }
 
   p {
-    margin: 0 0 5.5pt 0;
+    margin: 0 0 8pt 0;
     text-align: justify;
     color: #000000;
   }
 
   /* Danh sách gạch đầu dòng căn chỉnh chuẩn, dễ đọc quét thông tin */
   ul, ol {
-    margin: 2pt 0 7pt 0;
-    padding-left: 18pt;
+    margin: 3pt 0 9pt 0;
+    padding-left: 20pt;
     color: #000000;
   }
 
   li {
-    margin-bottom: 3.5pt;
+    margin-bottom: 5pt;
     text-align: justify;
     color: #000000;
   }
 
   li > ul {
-    margin-top: 2.5pt;
-    margin-bottom: 2.5pt;
-    padding-left: 16pt;
+    margin-top: 3pt;
+    margin-bottom: 3pt;
+    padding-left: 18pt;
   }
 
   code {
@@ -188,7 +188,8 @@
   .equation {
     text-align: center;
     font-style: italic;
-    margin: 7pt 0;
+    margin: 10pt 0;
+    font-size: 12.5pt;
     color: #000000;
     background: #ffffff;
     border: none;
@@ -196,16 +197,16 @@
 
   /* Bảng dữ liệu kiểu học thuật booktabs: chỉ có kẻ ngang mảnh màu đen, không kẻ ô vuông */
   .table-wrap {
-    margin: 8pt 0 10pt 0;
+    margin: 12pt 0 14pt 0;
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
   .table-caption {
-    font-size: 10.5pt;
+    font-size: 12pt;
     font-weight: bold;
     text-align: left;
-    margin: 0 0 3.5pt 0;
+    margin: 0 0 5pt 0;
     color: #000000;
   }
 
@@ -218,8 +219,8 @@
     border-collapse: collapse;
     background: #ffffff;
     color: #000000;
-    font-size: 9.5pt;
-    line-height: 1.3;
+    font-size: 11pt;
+    line-height: 1.4;
     border-top: 1.2pt solid #000000;
     border-bottom: 1.2pt solid #000000;
     border-left: none;
@@ -230,7 +231,7 @@
     font-weight: bold;
     text-align: center;
     vertical-align: bottom;
-    padding: 4.5pt 4pt;
+    padding: 6pt 5pt;
     color: #000000;
     background: #ffffff;
     border-bottom: 0.8pt solid #000000;
@@ -240,7 +241,7 @@
   }
 
   table.data-table tbody td {
-    padding: 3.2pt 4pt;
+    padding: 4.5pt 5pt;
     vertical-align: top;
     color: #000000;
     background: #ffffff;
@@ -248,13 +249,13 @@
   }
 
   table.data-table tbody tr.group-sep td {
-    padding-top: 5.5pt;
+    padding-top: 6pt;
   }
 
   table.data-table tbody tr.summary-row td {
     border-top: 0.6pt solid #000000;
     font-weight: bold;
-    padding-top: 4.5pt;
+    padding-top: 5pt;
   }
 
   table.data-table th.lft, table.data-table td.lft {
@@ -271,16 +272,16 @@
   }
 
   .table-note {
-    font-size: 9.2pt;
+    font-size: 10.5pt;
     font-style: italic;
-    margin-top: 3pt;
+    margin-top: 4pt;
     text-align: justify;
     color: #000000;
   }
 
   /* Hình biểu đồ nền trắng, không khung */
   figure {
-    margin: 9pt 0 11pt 0;
+    margin: 14pt 0 16pt 0;
     padding: 0;
     text-align: center;
     background: #ffffff;
@@ -291,31 +292,37 @@
 
   figure img {
     max-width: 98%;
-    max-height: 230px;
+    max-height: 270px;
     height: auto;
     display: block;
-    margin: 0 auto 4pt auto;
+    margin: 0 auto 5pt auto;
     border: none;
     background: #ffffff;
   }
 
   @media print {
     figure img {
-      max-height: 205px;
+      max-height: 250px;
     }
   }
 
   figcaption {
-    font-size: 10pt;
+    font-size: 11pt;
     text-align: justify;
     color: #000000;
     margin: 0 auto;
+    line-height: 1.4;
   }
 
   .ref-list {
-    padding-left: 18pt;
-    margin-top: 4pt;
-    font-size: 10pt;
+    padding-left: 20pt;
+    margin-top: 6pt;
+    font-size: 11pt;
+    line-height: 1.45;
+  }
+
+  .ref-list li {
+    margin-bottom: 5pt;
   }
 
   .ref-list li {
