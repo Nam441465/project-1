@@ -6,7 +6,6 @@ Sinh Hình 9 (Đối sánh F1-Score & Thời gian Huấn luyện) và Hình 10 (
 Xuất ảnh 300 DPI vào thư mục `figures/`.
 """
 
-import sys
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -156,25 +155,27 @@ def plot_fig10_pr_curves_rf_vs_gb(out_path: Path):
     print("[*] Đang vẽ Hình 10: Precision-Recall Curves (RF vs GB) cho 5 loại tấn công...")
     setup_matplotlib_style()
     
-    # Đọc ngưỡng tối ưu từ các bảng summary
+    # Đọc ngưỡng tối ưu từ các bảng summary & bảng đối sánh RF vs GB
     rf_sum = pd.read_csv(BASELINE_DIR / "summary_rf_comparison.csv")
     gb_sum = pd.read_csv(IMPROVED_DIR / "summary_gb_comparison.csv")
-    
+    comp_df = pd.read_csv(IMPROVED_DIR / "rf_vs_gb_comparison.csv")
+
     fig, axes = plt.subplots(2, 3, figsize=(18, 11))
     axes_flat = axes.flatten()
-    
-    # Định nghĩa cấu hình đường cong
+
     curve_configs = [
-        {"model": "RF", "cond": "nosmote", "cond_name": "Without SMOTE", "label": "RF (No SMOTE)", 
+        {"model": "RF", "cond": "nosmote", "cond_name": "Without SMOTE", "label": "RF (No SMOTE)",
          "color": "#1f77b4", "linestyle": "-", "marker": "o"},
-        {"model": "RF", "cond": "smote", "cond_name": "With SMOTE", "label": "RF (SMOTE)", 
+        {"model": "RF", "cond": "smote", "cond_name": "With SMOTE", "label": "RF (SMOTE)",
          "color": "#17becf", "linestyle": "--", "marker": "s"},
-        {"model": "GB", "cond": "nosmote", "cond_name": "Without SMOTE", "label": "GB (No SMOTE)", 
+        {"model": "GB", "cond": "nosmote", "cond_name": "Without SMOTE", "label": "GB (No SMOTE)",
          "color": "#2ca02c", "linestyle": "-", "marker": "*"},
-        {"model": "GB", "cond": "smote", "cond_name": "With SMOTE", "label": "GB (SMOTE)", 
-         "color": "#ff7f0e", "linestyle": "--", "marker": "^"}
+        {"model": "GB", "cond": "smote", "cond_name": "With SMOTE", "label": "GB (SMOTE)",
+         "color": "#ff7f0e", "linestyle": "--", "marker": "^"},
     ]
-    
+
+    ap_scores = {}
+
     for idx, attack in enumerate(TARGET_ATTACKS):
         ax = axes_flat[idx]
         ax.set_title(f"Tấn công: {attack}", fontsize=11, fontweight="bold", pad=8)
@@ -183,69 +184,75 @@ def plot_fig10_pr_curves_rf_vs_gb(out_path: Path):
         ax.grid(True, zorder=0)
         ax.set_xlim(-0.02, 1.02)
         ax.set_ylim(-0.02, 1.05)
-        
+
         for cfg in curve_configs:
             m_code = cfg["model"].lower()
             cond_code = cfg["cond"]
             dir_path = BASELINE_DIR if cfg["model"] == "RF" else IMPROVED_DIR
-            
+
             proba_file = dir_path / f"{m_code}_{attack.lower()}_{cond_code}_best_proba_test.npy"
             y_file = dir_path / f"{m_code}_{attack.lower()}_{cond_code}_y_test.npy"
-            
+
             if not proba_file.exists() or not y_file.exists():
                 continue
-                
+
             y_true = np.load(y_file)
             y_proba = np.load(proba_file)
-            
-            # Tính PR Curve và Average Precision (PR-AUC)
-            precisions, recalls, thresholds = precision_recall_curve(y_true, y_proba)
-            ap = average_precision_score(y_true, y_proba)
-            
-            # Lấy ngưỡng tối ưu đã chọn trên Validation
+
+            precisions, recalls, _ = precision_recall_curve(y_true, y_proba)
+            ap = float(average_precision_score(y_true, y_proba))
+            ap_scores[(attack, cfg["model"], cond_code)] = ap
+
             sum_df = rf_sum if cfg["model"] == "RF" else gb_sum
             match_row = sum_df[(sum_df["Attack"] == attack) & (sum_df["Condition"] == cfg["cond_name"])]
             t_opt = float(match_row["Threshold"].iloc[0]) if not match_row.empty else 0.5
-            
-            # Tính điểm hoạt động tại ngưỡng t_opt
+
             y_pred = (y_proba >= t_opt).astype(int)
             oper_p = precision_score(y_true, y_pred, zero_division=0)
             oper_r = recall_score(y_true, y_pred, zero_division=0)
-            
-            # Vẽ đường cong
+
             ax.plot(recalls, precisions, label=f"{cfg['label']} (AP={ap:.4f})",
                     color=cfg["color"], linestyle=cfg["linestyle"], linewidth=1.6, zorder=3)
-                    
-            # Đánh dấu điểm hoạt động
             ax.scatter([oper_r], [oper_p], color=cfg["color"], marker=cfg["marker"],
                        s=70, edgecolor="#2c3e50", zorder=5)
-                       
+
         ax.legend(loc="lower left", fontsize=7.5, framealpha=0.9, edgecolor="#bdc3c7")
-        
-    # Ô thứ 6 (Hàng 2, Cột 3): Hộp Tổng kết Khoa học So sánh RF vs GB
+
+    # Ô thứ 6 (Hàng 2, Cột 3): Hộp Tổng kết Khoa học đọc số liệu động từ CSV & PR-AUC
     ax_summary = axes_flat[5]
     ax_summary.axis("off")
-    
+
+    rf_no = rf_sum[rf_sum["Condition"] == "Without SMOTE"].set_index("Attack")
+    rf_sm = rf_sum[rf_sum["Condition"] == "With SMOTE"].set_index("Attack")
+    gb_no = gb_sum[gb_sum["Condition"] == "Without SMOTE"].set_index("Attack")
+    gb_sm = gb_sum[gb_sum["Condition"] == "With SMOTE"].set_index("Attack")
+
+    rf_wins_nosmote = int((rf_no.loc[TARGET_ATTACKS, "F1_Score"].values > rf_sm.loc[TARGET_ATTACKS, "F1_Score"].values).sum())
+    comp_no = comp_df[comp_df["Condition"] == "Without SMOTE"]
+    sp_min = float(comp_no["Speedup_Factor"].min())
+    sp_max = float(comp_no["Speedup_Factor"].max())
+    sp_avg_all = float(comp_df["Speedup_Factor"].mean())
+
+    ap_dos_no = ap_scores.get(("DoS", "GB", "nosmote"), 0.0)
+    ap_dos_sm = ap_scores.get(("DoS", "GB", "smote"), 0.0)
+
     summary_box_text = (
         "TỔNG KẾT KHOA HỌC: RANDOM FOREST VS GRADIENT BOOSTING\n"
         "────────────────────────────────────────────────────────\n\n"
         "1. HIỆU NĂNG NGUYÊN BẢN (WITHOUT SMOTE):\n"
-        " • Random Forest đạt F1 nhỉnh hơn một chút ở trạng thái nguyên bản nhờ cơ chế\n"
-        "   chia nhánh chính xác tuyệt đối (exact splits) trên các cổng dịch vụ rời rạc\n"
-        "   và giao thức tầng 7 (L4_DST_PORT, L7_PROTO).\n"
-        " • HistGradientBoosting đạt F1 tiệm cận rất sát (Reconnaissance 0.9611 vs 0.9673;\n"
-        "   Analysis 0.8690 vs 0.8733; Backdoor 0.9386 vs 0.9535) và xây dựng ranh giới phi tuyến mượt mà.\n\n"
-        "2. SỰ KHÁC BIỆT THÚ VỊ GIỮA 2 HỌ MÔ HÌNH VỚI SMOTE:\n"
-        " • Random Forest bị suy giảm F1 ở 4/5 loại tấn công khi dùng SMOTE do nhiễu nội suy\n"
-        "   trong không gian đặc trưng mạng rời rạc (Nghịch lý SMOTE).\n"
-        " • Ngược lại, HistGradientBoosting (sử dụng 255 histogram bins) được SMOTE cải\n"
-        "   thiện cả PR-AUC và F1 (Backdoor: 0.9386 -> 0.9440; Analysis: 0.8690 -> 0.8703;\n"
-        "   Reconnaissance: 0.9611 -> 0.9630; và PR-AUC của DoS tăng từ 0.8899 -> 0.8983)\n"
-        "   nhờ tăng mật độ mẫu tấn công trong quá trình chia bin lượng tử hóa.\n\n"
+        " • Random Forest đạt F1 nhỉnh hơn ở trạng thái nguyên bản nhờ cơ chế\n"
+        "   chia nhánh chính xác trên cổng dịch vụ rời rạc và giao thức tầng 7.\n"
+        f" • HistGB đạt F1 tiệm cận sát (Reconnaissance {gb_no.loc['Reconnaissance', 'F1_Score']:.4f} vs {rf_no.loc['Reconnaissance', 'F1_Score']:.4f};\n"
+        f"   Analysis {gb_no.loc['Analysis', 'F1_Score']:.4f} vs {rf_no.loc['Analysis', 'F1_Score']:.4f}; Backdoor {gb_no.loc['Backdoor', 'F1_Score']:.4f} vs {rf_no.loc['Backdoor', 'F1_Score']:.4f}).\n\n"
+        "2. SỰ KHÁC BIỆT GIỮA 2 HỌ MÔ HÌNH VỚI SMOTE:\n"
+        f" • Random Forest suy giảm F1 ở {rf_wins_nosmote}/{len(TARGET_ATTACKS)} tấn công khi dùng SMOTE (Nghịch lý SMOTE).\n"
+        " • Ngược lại, HistGB (255 histogram bins) được SMOTE cải thiện\n"
+        f"   F1 ở Backdoor ({gb_no.loc['Backdoor', 'F1_Score']:.4f} -> {gb_sm.loc['Backdoor', 'F1_Score']:.4f}), Analysis ({gb_no.loc['Analysis', 'F1_Score']:.4f} -> {gb_sm.loc['Analysis', 'F1_Score']:.4f}),\n"
+        f"   Recon ({gb_no.loc['Reconnaissance', 'F1_Score']:.4f} -> {gb_sm.loc['Reconnaissance', 'F1_Score']:.4f}) và PR-AUC DoS ({ap_dos_no:.4f} -> {ap_dos_sm:.4f}).\n\n"
         "3. ĐỘT PHÁ TỐC ĐỘ & KHẢ NĂNG MỞ RỘNG (SCALABILITY):\n"
-        " • HistGradientBoosting nhanh hơn Random Forest từ 10x đến 50x lần nhờ kỹ thuật\n"
-        "   rời rạc hóa histogram và song song hóa OpenMP.\n"
-        " • Phù hợp làm tuyến phòng thủ đầu tiên cho luồng NIDS lưu lượng cao thời gian thực."
+        f" • HistGB nhanh hơn RF {sp_min:.2f}x–{sp_max:.2f}x (No SMOTE; TB toàn bộ {sp_avg_all:.2f}x)\n"
+        "   nhờ rời rạc hóa histogram và song song hóa OpenMP.\n"
+        " • Phù hợp làm tuyến phòng thủ đầu tiên cho luồng NIDS lưu lượng cao."
     )
     
     ax_summary.text(0.04, 0.5, summary_box_text, transform=ax_summary.transAxes,

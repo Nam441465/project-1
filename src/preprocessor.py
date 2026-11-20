@@ -1,3 +1,4 @@
+import gc
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -39,8 +40,12 @@ def normalize_attack_name(attack_name: str) -> str:
             return va
     raise ValueError(f"Tên tấn công không hợp lệ: '{attack_name}'. Các loại hỗ trợ: {list(ATTACK_MAP.values())}")
 
-def load_split(split: str = "train") -> pd.DataFrame:
-    """Nạp một phân vùng dữ liệu từ cache parquet."""
+def load_split(
+    split: str = "train",
+    columns: list[str] | None = None,
+    filters: list | None = None,
+) -> pd.DataFrame:
+    """Nạp một phân vùng dữ liệu từ cache parquet (hỗ trợ chiếu cột và lọc PyArrow)."""
     valid_splits = {"train", "val", "heldout_test"}
     if split not in valid_splits:
         raise ValueError(f"Split '{split}' không hợp lệ. Phải thuộc: {valid_splits}")
@@ -49,7 +54,12 @@ def load_split(split: str = "train") -> pd.DataFrame:
     if not file_path.exists():
         raise FileNotFoundError(f"Không tìm thấy file: {file_path}")
     
-    return pd.read_parquet(file_path)
+    read_kwargs = {}
+    if columns is not None:
+        read_kwargs["columns"] = columns
+    if filters is not None:
+        read_kwargs["filters"] = filters
+    return pd.read_parquet(file_path, **read_kwargs)
 
 def filter_binary_attack(df: pd.DataFrame, attack_name: str) -> pd.DataFrame:
     """
@@ -88,28 +98,31 @@ def prepare_features_and_labels(df: pd.DataFrame, drop_ip: bool = True):
 
 def get_binary_data(attack_name: str, split: str = "train", drop_ip: bool = True):
     """Nạp và lọc dữ liệu nhị phân cho 1 phân vùng duy nhất."""
-    df = load_split(split)
+    columns = FEATURE_COLS + ["Attack"] if drop_ip else None
+    df = load_split(split, columns=columns)
     filtered = filter_binary_attack(df, attack_name)
+    del df
     X, y = prepare_features_and_labels(filtered, drop_ip=drop_ip)
+    del filtered
     return X, y
 
 def get_all_splits_for_attack(attack_name: str, drop_ip: bool = True):
     """
-    Nạp toàn bộ 3 phân vùng (Train, Val, Held-out Test) cho 1 loại tấn công.
+    Nạp tuần tự và giải phóng bộ nhớ trung gian cho toàn bộ 3 phân vùng
+    (Train, Val, Held-out Test) của 1 loại tấn công.
     Trả về: (X_train, y_train, X_val, y_val, X_test, y_test)
     """
     norm_name = normalize_attack_name(attack_name)
-    
-    train_df = load_split("train")
-    val_df = load_split("val")
-    test_df = load_split("heldout_test")
-    
-    train_f = filter_binary_attack(train_df, norm_name)
-    val_f = filter_binary_attack(val_df, norm_name)
-    test_f = filter_binary_attack(test_df, norm_name)
-    
-    X_train, y_train = prepare_features_and_labels(train_f, drop_ip=drop_ip)
-    X_val, y_val = prepare_features_and_labels(val_f, drop_ip=drop_ip)
-    X_test, y_test = prepare_features_and_labels(test_f, drop_ip=drop_ip)
-    
-    return X_train, y_train, X_val, y_val, X_test, y_test
+    columns = FEATURE_COLS + ["Attack"] if drop_ip else None
+
+    results = []
+    for split_name in ("train", "val", "heldout_test"):
+        df_split = load_split(split_name, columns=columns)
+        df_filtered = filter_binary_attack(df_split, norm_name)
+        del df_split
+        X_split, y_split = prepare_features_and_labels(df_filtered, drop_ip=drop_ip)
+        del df_filtered
+        results.extend((X_split, y_split))
+
+    gc.collect()
+    return tuple(results)

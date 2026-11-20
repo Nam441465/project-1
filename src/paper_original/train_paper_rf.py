@@ -7,17 +7,19 @@ Tái lập nguyên bản 100% pipeline Random Forest của bài báo MDPI Inform
 Selection and Class Balancing on UNSW-NB15 Traffic") trên bộ dữ liệu NF-UNSW-NB15
 của dự án (cùng phân vùng train.parquet / val.parquet / heldout_test.parquet).
 
-Đặc tả nguyên bản (KHÔNG thêm bất kỳ cải tiến nào):
+Đặc tả nguyên bản (KHÔNG thêm bất kỳ cải tiến toán học nào):
 1. Khi use_smote=True: chạy SMOTE(sampling_strategy={1: 56000}, random_state=10)
    trực tiếp 1 lần trên toàn bộ (X_train, y_train) TRƯỚC SelectKBest và TRƯỚC
    RandomizedSearchCV (không dùng ImbPipeline, giữ nguyên thiết kế gốc).
 2. Chọn đặc trưng bằng SelectKBest(functools.partial(mutual_info_classif, random_state=10), k=k)
    với mặc định discrete_features='auto' trên 100% (X_train, y_train).
+   (Điểm MI thô được cache trong .k_cache/ giữa các subprocess k để tránh tính lại 4 lần).
 3. RandomizedSearchCV (n_iter=10, cv=3, scoring='f1', random_state=10, refit=False)
    trực tiếp trên 100% (X_train_k, y_train) — không lấy mẫu con.
 4. Huấn luyện lại RandomForestClassifier(**best_params, random_state=10, n_jobs=-1)
    trên toàn bộ (X_train_k, y_train) và đo train_time_sec.
-5. Dò ngưỡng quyết định trên Validation theo đúng np.arange(0.05, 0.95, 0.01) tối ưu F1.
+5. Dò ngưỡng quyết định trên Validation theo đúng np.round(np.arange(0.05, 0.95, 0.01), 2)
+   tối ưu F1 (vector hóa O(N log N)).
 6. Đánh giá trên Held-out Test, lưu checkpoint sau từng mốc k, lưu xác suất (.npy)
    và mô hình (.joblib + selector + metadata.json) vào results/paper_original/.
 
@@ -27,9 +29,7 @@ Quản lý bộ nhớ an toàn trên WSL2 (không thay đổi toán học):
 """
 
 import argparse
-import ctypes
 import functools
-import gc
 import json
 import os
 import subprocess
@@ -43,13 +43,6 @@ import pandas as pd
 from imblearn.over_sampling import SMOTE
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import SelectKBest, mutual_info_classif
-from sklearn.metrics import (
-    accuracy_score,
-    confusion_matrix,
-    f1_score,
-    precision_score,
-    recall_score,
-)
 from sklearn.model_selection import RandomizedSearchCV
 
 PAPER_SRC_DIR = Path(__file__).resolve().parent
@@ -59,36 +52,23 @@ PROJECT_ROOT = SRC_DIR.parent
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from pipeline_utils import (  # noqa: E402
+    DEFAULT_K_VALUES,
+    TARGET_ATTACKS,
+    build_model_metadata,
+    evaluate_binary_predictions,
+    is_experiment_complete,
+    json_serializer,
+    normalize_nullable_param,
+    select_best_row,
+    trim_memory,
+    vectorized_threshold_sweep,
+)
 from preprocessor import get_all_splits_for_attack, normalize_attack_name  # noqa: E402
 
 PAPER_RESULTS_DIR = PROJECT_ROOT / "results" / "paper_original"
 PAPER_MODELS_DIR = PAPER_RESULTS_DIR / "models"
 K_CACHE_DIR = PAPER_RESULTS_DIR / ".k_cache"
-
-TARGET_ATTACKS = ["DoS", "Exploits", "Backdoor", "Analysis", "Reconnaissance"]
-DEFAULT_K_VALUES = [3, 5, 7, 10]
-
-
-def _trim_memory():
-    """Ép glibc trả lại các trang bộ nhớ đã giải phóng về cho HĐH Linux / Hyper-V."""
-    gc.collect()
-    try:
-        libc = ctypes.CDLL("libc.so.6")
-        libc.malloc_trim(0)
-    except Exception:
-        pass
-
-
-def _json_serializer(obj):
-    if isinstance(obj, (np.integer, np.int64, np.int32)):
-        return int(obj)
-    if isinstance(obj, (np.floating, np.float64, np.float32)):
-        return float(obj)
-    if isinstance(obj, np.ndarray):
-        return obj.tolist()
-    if pd.isna(obj):
-        return None
-    return str(obj)
 
 
 def _save_mi_scores(attack_name: str, condition: str, feature_names: list, scores: np.ndarray):
@@ -127,8 +107,7 @@ def rebuild_summary_csv():
             df_m = pd.read_csv(metrics_path)
             if df_m.empty:
                 continue
-            best_idx = df_m["val_f1"].idxmax()
-            best_row = df_m.loc[best_idx]
+            best_row = select_best_row(df_m)
             summary_rows.append({
                 "Attack": att,
                 "Condition": cond_label,
@@ -159,32 +138,6 @@ def rebuild_summary_csv():
     return None
 
 
-def is_experiment_complete(prefix: str, k_values: list) -> bool:
-    """Kiểm tra xem một bài toán (attack, condition) đã hoàn tất đủ 4 mốc k và lưu đủ model/proba chưa."""
-    metrics_path = PAPER_RESULTS_DIR / f"{prefix}_metrics.csv"
-    model_path = PAPER_MODELS_DIR / f"{prefix}_best_model.joblib"
-    selector_path = PAPER_MODELS_DIR / f"{prefix}_best_selector.joblib"
-    meta_path = PAPER_MODELS_DIR / f"{prefix}_metadata.json"
-    proba_val_path = PAPER_RESULTS_DIR / f"{prefix}_best_proba_val.npy"
-    proba_test_path = PAPER_RESULTS_DIR / f"{prefix}_best_proba_test.npy"
-    y_val_path = PAPER_RESULTS_DIR / f"{prefix}_y_val.npy"
-    y_test_path = PAPER_RESULTS_DIR / f"{prefix}_y_test.npy"
-
-    required_files = [
-        metrics_path, model_path, selector_path, meta_path,
-        proba_val_path, proba_test_path, y_val_path, y_test_path,
-    ]
-    if not all(p.exists() for p in required_files):
-        return False
-
-    try:
-        df_m = pd.read_csv(metrics_path)
-        done_ks = set(df_m["k"].astype(int).tolist())
-        return set(int(k) for k in k_values).issubset(done_ks)
-    except Exception:
-        return False
-
-
 def is_k_cached(prefix: str, k: int) -> bool:
     """Kiểm tra xem mốc k cụ thể đã có dòng metrics CSV và bundle cache chưa."""
     metrics_path = PAPER_RESULTS_DIR / f"{prefix}_metrics.csv"
@@ -196,6 +149,21 @@ def is_k_cached(prefix: str, k: int) -> bool:
         return int(k) in set(df_m["k"].astype(int).tolist())
     except Exception:
         return False
+
+
+def _build_paper_selector_from_cache(
+    mi_score_func,
+    feature_names: list[str],
+    scores: np.ndarray,
+    k: int,
+) -> SelectKBest:
+    """Construct SelectKBest with exact paper score_func from cached raw MI scores."""
+    selector = SelectKBest(score_func=mi_score_func, k=min(int(k), len(feature_names)))
+    selector.scores_ = np.asarray(scores, dtype=float).copy()
+    selector.pvalues_ = None
+    selector.n_features_in_ = len(feature_names)
+    selector.feature_names_in_ = np.asarray(feature_names, dtype=object)
+    return selector
 
 
 def _run_worker_single_k(
@@ -240,22 +208,52 @@ def _run_worker_single_k(
             flush=True,
         )
 
-    # BƯỚC 2: SelectKBest + mutual_info_classif chuẩn (discrete_features='auto')
-    t_mi0 = time.perf_counter()
+    # BƯỚC 2: SelectKBest + mutual_info_classif chuẩn (discrete_features='auto'), cache raw MI score vector
     mi_score_func = functools.partial(mutual_info_classif, random_state=10)
-    selector = SelectKBest(score_func=mi_score_func, k=int(k))
-    X_train_k = selector.fit_transform(X_train, y_train)
-    X_val_k = selector.transform(X_val)
-    X_test_k = selector.transform(X_test)
-    mi_time_sec = time.perf_counter() - t_mi0
+    mi_cache_path = K_CACHE_DIR / f"{prefix}_mi_scores.joblib"
+    selector = None
+    mi_time_sec = 0.0
+
+    if mi_cache_path.exists():
+        try:
+            cached_mi = joblib.load(mi_cache_path)
+            if cached_mi.get("feature_names") == feature_names:
+                t_mi0 = time.perf_counter()
+                selector = _build_paper_selector_from_cache(
+                    mi_score_func=mi_score_func,
+                    feature_names=feature_names,
+                    scores=cached_mi["scores"],
+                    k=int(k),
+                )
+                X_train_k = selector.transform(X_train)
+                X_val_k = selector.transform(X_val)
+                X_test_k = selector.transform(X_test)
+                mi_time_sec = float(cached_mi.get("mi_time_sec", time.perf_counter() - t_mi0))
+        except Exception:
+            selector = None
+
+    if selector is None:
+        t_mi0 = time.perf_counter()
+        selector = SelectKBest(score_func=mi_score_func, k=min(int(k), len(feature_names)))
+        X_train_k = selector.fit_transform(X_train, y_train)
+        X_val_k = selector.transform(X_val)
+        X_test_k = selector.transform(X_test)
+        mi_time_sec = time.perf_counter() - t_mi0
+        joblib.dump(
+            {
+                "feature_names": feature_names,
+                "scores": np.asarray(selector.scores_, dtype=float),
+                "mi_time_sec": float(mi_time_sec),
+            },
+            mi_cache_path,
+        )
 
     selected_cols = [feature_names[idx] for idx in selector.get_support(indices=True)]
     print(f"    [Bước 2] SelectKBest (MI auto, {mi_time_sec:.2f}s) -> {selected_cols}", flush=True)
     _save_mi_scores(norm_attack, condition, feature_names, selector.scores_)
 
-    # Giải phóng DataFrame 10 cột gốc trước khi vào RandomizedSearchCV để tiết kiệm RAM
     del X_train, X_val, X_test
-    _trim_memory()
+    trim_memory()
 
     # BƯỚC 3: RandomizedSearchCV trên 100% (X_train_k, y_train)
     param_dist = {
@@ -293,7 +291,7 @@ def _run_worker_single_k(
         flush=True,
     )
     del search
-    _trim_memory()
+    trim_memory()
 
     # BƯỚC 4: Huấn luyện mô hình tốt nhất trên 100% (X_train_k, y_train)
     print(f"    [Bước 4] Fit RandomForestClassifier tốt nhất trên {len(X_train_k):,} mẫu...", flush=True)
@@ -304,19 +302,14 @@ def _run_worker_single_k(
     print(f"    [Bước 4] Hoàn tất fit trong {train_time_sec:.2f}s.", flush=True)
 
     del X_train_k, y_train
-    _trim_memory()
+    trim_memory()
 
-    # BƯỚC 5: Dò ngưỡng quyết định trên Validation (np.arange(0.05, 0.95, 0.01))
+    # BƯỚC 5: Dò ngưỡng vector hóa trên Validation theo lưới làm tròn chính xác 0.05..0.94
     val_proba = rf.predict_proba(X_val_k)[:, 1]
-    thresholds = np.arange(0.05, 0.95, 0.01)
-    best_threshold = 0.50
-    val_best_f1 = -1.0
-    for t in thresholds:
-        y_pred_val = (val_proba >= t).astype(int)
-        f1_val_t = f1_score(y_val, y_pred_val, zero_division=0)
-        if f1_val_t > val_best_f1:
-            val_best_f1 = float(f1_val_t)
-            best_threshold = float(t)
+    thresholds = np.round(np.arange(0.05, 0.95, 0.01), 2)
+    best_threshold, val_best_f1 = vectorized_threshold_sweep(
+        y_val, val_proba, thresholds, default_threshold=0.50, initial_best_f1=-1.0
+    )
 
     print(
         f"    [Bước 5] Ngưỡng tối ưu Validation (0.05..0.94): t={best_threshold:.2f} (Val F1={val_best_f1:.4f})",
@@ -326,18 +319,13 @@ def _run_worker_single_k(
     # BƯỚC 6: Đánh giá trên Held-out Test & Ghi Checkpoint ngay sau mỗi k
     t_test0 = time.perf_counter()
     test_proba = rf.predict_proba(X_test_k)[:, 1]
-    y_pred_test = (test_proba >= best_threshold).astype(int)
     test_time_sec = time.perf_counter() - t_test0
-
-    acc = accuracy_score(y_test, y_pred_test)
-    prec = precision_score(y_test, y_pred_test, zero_division=0)
-    rec = recall_score(y_test, y_pred_test, zero_division=0)
-    f1_te = f1_score(y_test, y_pred_test, zero_division=0)
-    tn, fp, fn, tp = confusion_matrix(y_test, y_pred_test).ravel()
+    test_metrics = evaluate_binary_predictions(y_test, test_proba, best_threshold)
 
     print(
-        f"    [Bước 6] HELD-OUT TEST: F1={f1_te:.4f} | Prec={prec:.4f} | Rec={rec:.4f} | Acc={acc:.4f} "
-        f"| TP={tp:,}, FP={fp:,}, FN={fn:,}, TN={tn:,}",
+        f"    [Bước 6] HELD-OUT TEST: F1={test_metrics['f1']:.4f} | Prec={test_metrics['precision']:.4f} "
+        f"| Rec={test_metrics['recall']:.4f} | Acc={test_metrics['accuracy']:.4f} "
+        f"| TP={test_metrics['TP']:,}, FP={test_metrics['FP']:,}, FN={test_metrics['FN']:,}, TN={test_metrics['TN']:,}",
         flush=True,
     )
 
@@ -347,19 +335,21 @@ def _run_worker_single_k(
         "k": int(k),
         "val_threshold": float(round(best_threshold, 2)),
         "val_f1": float(round(val_best_f1, 4)),
+        "raw_val_threshold": float(best_threshold),
+        "raw_val_f1": float(val_best_f1),
         "cv_best_f1": float(round(cv_best_f1, 4)),
-        "test_accuracy": float(round(acc, 4)),
-        "test_precision": float(round(prec, 4)),
-        "test_recall": float(round(rec, 4)),
-        "test_f1": float(round(f1_te, 4)),
-        "TP": int(tp),
-        "FP": int(fp),
-        "FN": int(fn),
-        "TN": int(tn),
+        "test_accuracy": float(round(test_metrics["accuracy"], 4)),
+        "test_precision": float(round(test_metrics["precision"], 4)),
+        "test_recall": float(round(test_metrics["recall"], 4)),
+        "test_f1": float(round(test_metrics["f1"], 4)),
+        "TP": int(test_metrics["TP"]),
+        "FP": int(test_metrics["FP"]),
+        "FN": int(test_metrics["FN"]),
+        "TN": int(test_metrics["TN"]),
         "n_estimators": int(best_params["n_estimators"]),
         "min_samples_leaf": int(best_params["min_samples_leaf"]),
-        "max_features": str(best_params["max_features"]),
-        "class_weight": str(best_params["class_weight"]),
+        "max_features": normalize_nullable_param(best_params.get("max_features")),
+        "class_weight": normalize_nullable_param(best_params.get("class_weight")),
         "selected_features": ";".join(selected_cols),
         "mi_time_sec": float(round(mi_time_sec, 2)),
         "search_time_sec": float(round(search_time_sec, 2)),
@@ -393,7 +383,7 @@ def _run_worker_single_k(
 
 
 def _finalize_experiment(attack_name: str, use_smote: bool, k_values: list):
-    """Chọn cấu hình best_k có val_f1 cao nhất từ các checkpoint k và lưu model + .npy chính thức."""
+    """Chọn cấu hình best_k theo raw_val_f1 (hòa điểm chọn k nhỏ hơn) và lưu model + .npy chính thức."""
     norm_attack = normalize_attack_name(attack_name)
     condition = "smote" if use_smote else "nosmote"
     prefix = f"paper_rf_{norm_attack.lower()}_{condition}"
@@ -408,14 +398,14 @@ def _finalize_experiment(attack_name: str, use_smote: bool, k_values: list):
         k_val = int(row["k"])
         b_path = K_CACHE_DIR / f"{prefix}_k{k_val}.joblib"
         b_meta = joblib.load(b_path)
-        rv = float(b_meta.get("raw_val_f1", row["val_f1"]))
-        if rv > best_raw_val_f1:
+        rv = float(b_meta.get("raw_val_f1", row.get("raw_val_f1", row["val_f1"])))
+        if rv > best_raw_val_f1 or (rv == best_raw_val_f1 and (best_k is None or k_val < best_k)):
             best_raw_val_f1 = rv
             best_k = k_val
         del b_meta
-        _trim_memory()
+        trim_memory()
 
-    best_row = df_final[df_final["k"] == best_k].iloc[0].to_dict()
+    best_row = df_final[df_final["k"].astype(int) == best_k].iloc[0].to_dict()
     bundle = joblib.load(K_CACHE_DIR / f"{prefix}_k{best_k}.joblib")
 
     _, _, _, y_val, _, y_test = get_all_splits_for_attack(norm_attack, drop_ip=True)
@@ -432,22 +422,30 @@ def _finalize_experiment(attack_name: str, use_smote: bool, k_values: list):
     joblib.dump(bundle["model"], model_path, compress=3)
     joblib.dump(bundle["selector"], selector_path)
 
-    meta_clean = dict(best_row)
-    meta_clean["val_threshold_exact"] = float(bundle.get("raw_val_threshold", best_row["val_threshold"]))
-    meta_clean["smote_time_sec"] = round(float(bundle.get("smote_time_sec", 0.0)), 2)
-    meta_clean["pipeline_variant"] = "Paper-Exact (Pospichal et al. MDPI Information 2026)"
+    meta_clean = build_model_metadata(
+        best_row,
+        extra={
+            "raw_val_f1": float(bundle.get("raw_val_f1", best_row.get("raw_val_f1", best_row["val_f1"]))),
+            "val_threshold_exact": float(bundle.get("raw_val_threshold", best_row["val_threshold"])),
+            "smote_time_sec": round(float(bundle.get("smote_time_sec", 0.0)), 2),
+            "pipeline_variant": "Paper-Exact (Pospichal et al. MDPI Information 2026)",
+        },
+    )
 
     with open(meta_path, "w", encoding="utf-8") as f:
-        json.dump(meta_clean, f, indent=4, default=_json_serializer)
+        json.dump(meta_clean, f, indent=4, default=json_serializer, allow_nan=False)
 
     del bundle
-    _trim_memory()
+    trim_memory()
 
     # Dọn dẹp cache tạm của bài toán này sau khi đã lưu chính thức thành công
     for k in k_values:
         tmp_f = K_CACHE_DIR / f"{prefix}_k{int(k)}.joblib"
         if tmp_f.exists():
             tmp_f.unlink()
+    mi_cache_path = K_CACHE_DIR / f"{prefix}_mi_scores.joblib"
+    if mi_cache_path.exists():
+        mi_cache_path.unlink()
     try:
         if K_CACHE_DIR.exists() and not any(K_CACHE_DIR.iterdir()):
             K_CACHE_DIR.rmdir()
@@ -465,7 +463,7 @@ def _finalize_experiment(attack_name: str, use_smote: bool, k_values: list):
 def train_paper_exact_single(
     attack_name: str,
     use_smote: bool = False,
-    k_values: list = None,
+    k_values: list | None = None,
     cv_jobs: int = 1,
     rf_inner_jobs: int = 3,
     force: bool = False,
@@ -477,19 +475,24 @@ def train_paper_exact_single(
 
     if k_values is None:
         k_values = list(DEFAULT_K_VALUES)
+    if not k_values:
+        raise ValueError("k_values must not be empty.")
 
     norm_attack = normalize_attack_name(attack_name)
     condition = "smote" if use_smote else "nosmote"
     prefix = f"paper_rf_{norm_attack.lower()}_{condition}"
     metrics_csv = PAPER_RESULTS_DIR / f"{prefix}_metrics.csv"
 
-    if (not force) and is_experiment_complete(prefix, k_values):
+    if (not force) and is_experiment_complete(PAPER_RESULTS_DIR, PAPER_MODELS_DIR, prefix, k_values):
         print(f"[>] BỎ QUA (Đã hoàn tất đủ {k_values} + model/proba): {prefix}", flush=True)
         return pd.read_csv(metrics_csv)
 
     if force:
         if metrics_csv.exists():
             metrics_csv.unlink()
+        mi_cache_path = K_CACHE_DIR / f"{prefix}_mi_scores.joblib"
+        if mi_cache_path.exists():
+            mi_cache_path.unlink()
         for k in k_values:
             tmp_f = K_CACHE_DIR / f"{prefix}_k{int(k)}.joblib"
             if tmp_f.exists():
@@ -559,7 +562,7 @@ def main():
     parser.add_argument(
         "--attacks",
         nargs="+",
-        default=TARGET_ATTACKS,
+        default=list(TARGET_ATTACKS),
         help="Danh sách tấn công cần chạy (mặc định: cả 5 loại)",
     )
     parser.add_argument(
@@ -573,7 +576,7 @@ def main():
         "--k-values",
         nargs="+",
         type=int,
-        default=DEFAULT_K_VALUES,
+        default=list(DEFAULT_K_VALUES),
         help="Dải số lượng đặc trưng k (mặc định: 3 5 7 10)",
     )
     parser.add_argument(
@@ -593,7 +596,6 @@ def main():
         action="store_true",
         help="Buộc chạy lại từ đầu kể cả khi kết quả của bài toán đó đã tồn tại",
     )
-    # Cờ nội bộ cho subprocess cô lập RAM
     parser.add_argument("--worker-single-k", type=int, default=None, help=argparse.SUPPRESS)
     parser.add_argument("--worker-finalize", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()

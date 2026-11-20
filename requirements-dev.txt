@@ -1,0 +1,13 @@
+# ==============================================================================
+# requirements-dev.txt - Development, Testing & Linting Dependencies
+# ==============================================================================
+# WSL2 Environment Status (verified in /home/hi_nam/venv):
+#   - pytest 7.4.4       : INSTALLED (/home/hi_nam/venv/bin/python -m pytest, also /usr/bin/pytest)
+#   - pytest-cov >= 5.0  : NOT INSTALLED in /home/hi_nam/venv (optional coverage plugin)
+#   - ruff >= 0.6        : NOT INSTALLED in /home/hi_nam/venv (optional linter/formatter)
+# ==============================================================================
+-r requirements.txt
+
+pytest>=7.4.0
+pytest-cov>=5.0
+ruff>=0.6

@@ -13,7 +13,6 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
 
 # Đường dẫn thư mục
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -98,7 +97,7 @@ def plot_fig01_class_imbalance(train_df: pd.DataFrame, out_path: Path):
     ax2.grid(axis="x", zorder=0)
     ax2.set_xlim(0, attack_counts.max() * 1.35)
     
-    for idx, (bar, (att, count)) in enumerate(zip(bars2, attack_counts.items())):
+    for bar, (att, count) in zip(bars2, attack_counts.items()):
         ratio = n_benign / count
         is_target = att in TARGET_ATTACKS
         text_weight = "bold" if is_target else "normal"
@@ -278,27 +277,26 @@ def compute_and_plot_fig04_mi_heatmap(train_df: pd.DataFrame, csv_path: Path, ou
 def plot_fig05_train_val_test_consistency(train_df: pd.DataFrame, val_df: pd.DataFrame, test_df: pd.DataFrame, out_path: Path):
     print("[*] Đang vẽ Hình 5: Train / Val / Test Consistency...")
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
-    
+
     # Panel trái: So sánh tỷ lệ % của các lớp qua 3 tập
-    classes = ["Benign"] + [att for att in train_df["Attack"].value_counts().index if att != "Benign"]
-    
-    pct_train = [(train_df["Attack"] == c).mean() * 100 for c in classes]
-    pct_val = [(val_df["Attack"] == c).mean() * 100 for c in classes]
-    pct_test = [(test_df["Attack"] == c).mean() * 100 for c in classes]
-    
-    # Bỏ qua Benign ở biểu đồ cột con để thấy rõ các lớp tấn công nhỏ
-    attack_classes = [c for c in classes if c != "Benign"]
+    attack_classes = [att for att in train_df["Attack"].value_counts().index if att != "Benign"]
+
     att_train = [(train_df["Attack"] == c).mean() * 100 for c in attack_classes]
     att_val = [(val_df["Attack"] == c).mean() * 100 for c in attack_classes]
     att_test = [(test_df["Attack"] == c).mean() * 100 for c in attack_classes]
-    
+
+    total_all = len(train_df) + len(val_df) + len(test_df)
+    pct_tr = len(train_df) / total_all * 100.0
+    pct_va = len(val_df) / total_all * 100.0
+    pct_te = len(test_df) / total_all * 100.0
+
     y = np.arange(len(attack_classes))
     h = 0.25
-    
-    ax1.barh(y + h, att_train, height=h, color="#1f77b4", label="Train (68.05%)", edgecolor="#2c3e50")
-    ax1.barh(y, att_val, height=h, color="#2ca02c", label="Validation (9.59%)", edgecolor="#2c3e50")
-    ax1.barh(y - h, att_test, height=h, color="#ff7f0e", label="Held-out Test (22.37%)", edgecolor="#2c3e50")
-    
+
+    ax1.barh(y + h, att_train, height=h, color="#1f77b4", label=f"Train ({pct_tr:.2f}%)", edgecolor="#2c3e50")
+    ax1.barh(y, att_val, height=h, color="#2ca02c", label=f"Validation ({pct_va:.2f}%)", edgecolor="#2c3e50")
+    ax1.barh(y - h, att_test, height=h, color="#ff7f0e", label=f"Held-out Test ({pct_te:.2f}%)", edgecolor="#2c3e50")
+
     ax1.set_yticks(y)
     ax1.set_yticklabels(attack_classes, fontweight="bold")
     ax1.set_xlabel("Tỷ lệ phần trăm trong phân vùng (%)", fontweight="bold")
@@ -306,17 +304,14 @@ def plot_fig05_train_val_test_consistency(train_df: pd.DataFrame, val_df: pd.Dat
     ax1.set_xlim(0, max(att_train) * 1.32)
     ax1.legend(loc="lower right")
     ax1.grid(axis="x")
-    
-    # Panel phải: Phân phối chuẩn hóa của 3 đặc trưng tiêu biểu trên 3 tập
-    # Dùng hàm phân phối tích lũy CDF (Empirical CDF) để đối chiếu
-    feats_to_check = ["IN_BYTES", "OUT_BYTES", "FLOW_DURATION_MILLISECONDS"]
+
+    # Panel phải: Hàm phân phối tích lũy CDF của IN_BYTES (log1p) qua 3 tập
     colors = ["#1f77b4", "#2ca02c", "#ff7f0e"]
     styles = ["-", "--", ":"]
-    
-    # Vẽ CDF của IN_BYTES (log1p)
-    sampled_tr = np.log1p(train_df["IN_BYTES"].sample(n=30000, random_state=10))
-    sampled_va = np.log1p(val_df["IN_BYTES"].sample(n=30000, random_state=10))
-    sampled_te = np.log1p(test_df["IN_BYTES"].sample(n=30000, random_state=10))
+
+    sampled_tr = np.log1p(train_df["IN_BYTES"].sample(n=min(30000, len(train_df)), random_state=10))
+    sampled_va = np.log1p(val_df["IN_BYTES"].sample(n=min(30000, len(val_df)), random_state=10))
+    sampled_te = np.log1p(test_df["IN_BYTES"].sample(n=min(30000, len(test_df)), random_state=10))
     
     for s_data, name, col, st in zip([sampled_tr, sampled_va, sampled_te],
                                      ["Train Set", "Validation Set", "Held-out Test"],
@@ -399,64 +394,77 @@ def plot_fig06_rf_smote_vs_nosmote(summary_df: pd.DataFrame, out_path: Path):
 # ==============================================================================
 # 7. HÌNH 7: ĐỘ NHẠY VỚI SỐ LƯỢNG ĐẶC TRƯNG K (K-SENSITIVITY)
 # ==============================================================================
-def plot_fig07_rf_k_sensitivity(results_dir: Path, out_path: Path):
+def plot_fig07_rf_k_sensitivity(results_dir: Path, val_df: pd.DataFrame, out_path: Path):
     print("[*] Đang vẽ Hình 7: Sensitivity theo k...")
     fig, axes = plt.subplots(2, 3, figsize=(15, 9))
     axes = axes.flatten()
-    
+
     k_vals = [3, 5, 7, 10]
-    
+    peak_k10_attacks = []
+    an_no_df = None
+
     for i, att in enumerate(TARGET_ATTACKS):
         ax = axes[i]
         no_file = results_dir / f"rf_{att.lower()}_nosmote_metrics.csv"
         sm_file = results_dir / f"rf_{att.lower()}_smote_metrics.csv"
-        
+
         df_no = pd.read_csv(no_file).sort_values("k")
         df_sm = pd.read_csv(sm_file).sort_values("k")
-        
+        if att == "Analysis":
+            an_no_df = df_no.set_index("k")
+
         ax.plot(df_no["k"], df_no["val_f1"], "b--", alpha=0.6, label="Val F1 (No SMOTE)")
         ax.plot(df_no["k"], df_no["test_f1"], "b-o", linewidth=2, label="Test F1 (No SMOTE)")
-        
+
         ax.plot(df_sm["k"], df_sm["val_f1"], color="#e67e22", linestyle="--", alpha=0.6, label="Val F1 (SMOTE)")
         ax.plot(df_sm["k"], df_sm["test_f1"], color="#e67e22", linestyle="-", marker="s", linewidth=2, label="Test F1 (SMOTE)")
-        
-        # Đánh dấu điểm tốt nhất No SMOTE
+
         best_no_row = df_no.loc[df_no["val_f1"].idxmax()]
+        if int(best_no_row["k"]) == 10:
+            peak_k10_attacks.append(att)
         ax.scatter([best_no_row["k"]], [best_no_row["test_f1"]], s=140, facecolors="none", edgecolors="blue", linewidths=2.2, zorder=5)
-        
+
         best_sm_row = df_sm.loc[df_sm["val_f1"].idxmax()]
         ax.scatter([best_sm_row["k"]], [best_sm_row["test_f1"]], s=140, facecolors="none", edgecolors="#e67e22", linewidths=2.2, zorder=5)
-        
-        ax.set_title(f"{att} (Đỉnh No SMOTE k={best_no_row['k']})", fontweight="bold")
+
+        ax.set_title(f"{att} (Đỉnh No SMOTE k={int(best_no_row['k'])})", fontweight="bold")
         ax.set_xlabel("Số đặc trưng (k)")
         ax.set_ylabel("F1-Score")
         ax.set_xticks(k_vals)
         ax.grid(True)
         if i == 0:
             ax.legend(loc="lower right", fontsize=8, framealpha=0.9)
-            
-    # Ô thứ 6 làm phần tổng kết nhận định
+
+    # Ô thứ 6: Hộp tổng kết số liệu động từ CSV
     ax6 = axes[5]
     ax6.axis("off")
+    n_val_an = int((val_df["Attack"] == "Analysis").sum())
+    an_best_val = float(an_no_df["val_f1"].max()) if an_no_df is not None else 0.0
+    an_peak_ks = [int(k) for k, v in an_no_df["val_f1"].items() if abs(float(v) - an_best_val) < 1e-9] if an_no_df is not None else []
+    an_peak_str = " và ".join(f"k={k}" for k in an_peak_ks)
+    an_k3_test = float(an_no_df.loc[3, "test_f1"]) if an_no_df is not None and 3 in an_no_df.index else 0.0
+    an_k7_test = float(an_no_df.loc[7, "test_f1"]) if an_no_df is not None and 7 in an_no_df.index else 0.0
+    an_k10_test = float(an_no_df.loc[10, "test_f1"]) if an_no_df is not None and 10 in an_no_df.index else 0.0
+
     summary_box_text = (
         "QUY LUẬT ĐỘ NHẠY VỚI k (FEATURE SENSITIVITY):\n\n"
-        "1. Xu hướng chung (4/5 bài toán):\n"
-        "   - DoS, Exploits, Backdoor, Reconnaissance\n"
-        "     đạt F1 cao nhất tại k = 10.\n"
+        f"1. Xu hướng chung ({len(peak_k10_attacks)}/{len(TARGET_ATTACKS)} bài toán):\n"
+        f"   - {', '.join(peak_k10_attacks)}\n"
+        "     đạt Val F1 cao nhất tại k = 10.\n"
         "   - Mô hình mạng cần đầy đủ bối cảnh cổng L4,\n"
         "     giao thức L7, cờ TCP và thời gian luồng.\n\n"
         "2. Trường hợp đặc biệt (Analysis):\n"
-        "   - Trên Val (191 mẫu Attack), k=3 và k=5 đồng hạng\n"
-        "     đỉnh Val F1=0.8863 (Test F1 đạt 0.8733 ở k=3).\n"
-        "   - Trên Held-out Test lớn, k=7 và k=10 vẫn đạt\n"
-        "     Test F1 cao hơn (0.8789 và 0.8783).\n\n"
+        f"   - Trên Val ({n_val_an} mẫu Attack), {an_peak_str} đồng hạng\n"
+        f"     đỉnh Val F1={an_best_val:.4f} (Test F1 đạt {an_k3_test:.4f} ở k=3).\n"
+        "   - Trên Held-out Test lớn, k=7 và k=10 đạt\n"
+        f"     Test F1 cao hơn ({an_k7_test:.4f} và {an_k10_test:.4f}).\n\n"
         "3. Tính bám sát cực cao (Zero Leakage):\n"
         "   - Đường Test F1 luôn bám sát Val F1,\n"
-        "   - Khẳng định dò ngưỡng trên Val hiệu quả 100%."
+        "   - Khẳng định dò ngưỡng trên Val hiệu quả."
     )
-    ax6.text(0.05, 0.5, summary_box_text, va="center", ha="left", fontsize=9.5,
+    ax6.text(0.05, 0.5, summary_box_text, va="center", ha="left", fontsize=9.2,
              bbox=dict(boxstyle="round,pad=0.8", facecolor="#f8f9fa", edgecolor="#6c757d", lw=1.2))
-             
+
     fig.suptitle("Độ Nhạy của F1-Score theo Số lượng Đặc trưng k (k = 3, 5, 7, 10)", fontsize=13, y=0.995)
     plt.tight_layout()
     fig.savefig(out_path, dpi=300)
@@ -466,7 +474,7 @@ def plot_fig07_rf_k_sensitivity(results_dir: Path, out_path: Path):
 # ==============================================================================
 # 8. HÌNH 8: TÁI TẠO BẢNG 8 (TABLE 8 CONFUSION MATRICES - 5 CẶP)
 # ==============================================================================
-def plot_fig08_rf_confusion_matrices_table8(results_dir: Path, summary_df: pd.DataFrame, out_path: Path):
+def plot_fig08_rf_confusion_matrices_table8(results_dir: Path, out_path: Path):
     print("[*] Đang vẽ Hình 8: Table 8 Confusion Matrices (5 cặp)...")
     fig, axes = plt.subplots(5, 2, figsize=(11, 19))
     
@@ -501,14 +509,6 @@ def plot_fig08_rf_confusion_matrices_table8(results_dir: Path, summary_df: pd.Da
             pct_fp = fp / n_benign_true * 100
             pct_fn = fn / n_attack_true * 100
             pct_tp = tp / n_attack_true * 100
-            
-            # Ma trận hiển thị màu: đúng (xanh lá nhạt), sai (cam/đỏ nhạt)
-            # Tạo ma trận màu sắc nền 2x2
-            # Ô (0,0): TN, Ô (0,1): FP, Ô (1,0): FN, Ô (1,1): TP
-            color_matrix = np.array([
-                [pct_tn / 100, -(pct_fp / 100)],
-                [-(pct_fn / 100), pct_tp / 100]
-            ])
             
             # Dùng biểu đồ text trực tiếp với khung kẻ ô
             ax.set_xlim(0, 2)
@@ -548,14 +548,30 @@ def plot_fig08_rf_confusion_matrices_table8(results_dir: Path, summary_df: pd.Da
 # ==============================================================================
 # 9. XUẤT BÁO CÁO TỔNG HỢP 6 PHÁT HIỆN KHOA HỌC
 # ==============================================================================
-def generate_findings_report(train_df: pd.DataFrame, mi_df: pd.DataFrame, summary_df: pd.DataFrame, report_path: Path):
+def generate_findings_report(
+    train_df: pd.DataFrame,
+    val_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+    mi_df: pd.DataFrame,
+    summary_df: pd.DataFrame,
+    report_path: Path,
+):
     print("[*] Đang tổng hợp báo cáo 6 phát hiện khoa học...")
-    
+
     n_total = len(train_df)
     n_benign = int((train_df["Attack"] == "Benign").sum())
     n_attack = n_total - n_benign
-    
-    # Tìm cặp tương quan cao nhất
+    total_all = len(train_df) + len(val_df) + len(test_df)
+
+    # Đếm từng lớp tấn công mục tiêu từ train_df
+    vc = train_df["Attack"].value_counts()
+    target_sorted = sorted(TARGET_ATTACKS, key=lambda a: int(vc.get(a, 0)), reverse=True)
+    imbalance_bullets = "\n".join(
+        f"  - `{att}`: {int(vc.get(att, 0)):,} mẫu $\\rightarrow$ **1 : {round(n_benign / max(int(vc.get(att, 1)), 1)):,}**"
+        for att in target_sorted
+    )
+
+    # Tìm cặp tương quan cao nhất và các cặp đáng chú ý
     corr = train_df[FEATURE_COLS].corr(method="pearson")
     high_corrs = []
     for i in range(len(FEATURE_COLS)):
@@ -564,16 +580,50 @@ def generate_findings_report(train_df: pd.DataFrame, mi_df: pd.DataFrame, summar
             if abs(r_val) > 0.85:
                 high_corrs.append((FEATURE_COLS[i], FEATURE_COLS[j], r_val))
     high_corrs.sort(key=lambda x: abs(x[2]), reverse=True)
-    
+    r_in_out_pkts = float(corr.loc["IN_PKTS", "OUT_PKTS"])
+    r_in_bytes_pkts = float(corr.loc["IN_BYTES", "IN_PKTS"])
+
     # Top 3 MI cho từng loại tấn công
     top_mi = {}
     for att in TARGET_ATTACKS:
         top_s = mi_df[att].sort_values(ascending=False).head(3)
         top_mi[att] = [f"`{feat}` ({val:.4f})" for feat, val in top_s.items()]
-        
+
+    # Rút trích động số liệu SMOTE Paradox & Table 8
+    no_df = summary_df[summary_df["Condition"] == "Without SMOTE"].set_index("Attack")
+    sm_df = summary_df[summary_df["Condition"] == "With SMOTE"].set_index("Attack")
+    wins_no_smote = int((no_df.loc[TARGET_ATTACKS, "F1_Score"].values > sm_df.loc[TARGET_ATTACKS, "F1_Score"].values).sum())
+
+    smote_bullets = []
+    for att in ["Backdoor", "Analysis", "Reconnaissance", "Exploits", "DoS"]:
+        r_n = no_df.loc[att]
+        r_s = sm_df.loc[att]
+        if att == "DoS":
+            smote_bullets.append(
+                f"  - `{att}`: SMOTE giúp tăng nhẹ Recall ({r_n['Recall']:.4f} $\\rightarrow$ {r_s['Recall']:.4f}, "
+                f"FN giảm {int(r_n['FN'])} $\\rightarrow$ {int(r_s['FN'])}), nhưng làm F1 giảm "
+                f"({r_n['F1_Score']:.4f} $\\rightarrow$ {r_s['F1_Score']:.4f}) do FP tăng từ {int(r_n['FP'])} lên {int(r_s['FP'])}."
+            )
+        elif att == "Reconnaissance":
+            smote_bullets.append(
+                f"  - `{att}`: F1 không SMOTE = **{r_n['F1_Score']:.4f}** vs có SMOTE = **{r_s['F1_Score']:.4f}** "
+                f"(FN tăng từ {int(r_n['FN'])} lên {int(r_s['FN'])})."
+            )
+        else:
+            smote_bullets.append(
+                f"  - `{att}`: F1 không SMOTE = **{r_n['F1_Score']:.4f}** vs có SMOTE = **{r_s['F1_Score']:.4f}** "
+                f"(FP tăng từ {int(r_n['FP'])} lên {int(r_s['FP'])})."
+            )
+
+    an_n = no_df.loc["Analysis"]
+    dos_n = no_df.loc["DoS"]
+    dos_s = sm_df.loc["DoS"]
+    bd_n = no_df.loc["Backdoor"]
+    n_test_benign = int((test_df["Attack"] == "Benign").sum())
+
     report_content = f"""# Báo cáo Tổng hợp Phân tích Dữ liệu (EDA) & Thực nghiệm Cơ sở Random Forest
 
-Dự án Nghiên cứu & Tái lập Hệ thống NIDS trên tập dữ liệu **NF-UNSW-NB15** (1.62M bản ghi)
+Dự án Nghiên cứu & Tái lập Hệ thống NIDS trên tập dữ liệu **NF-UNSW-NB15** ({total_all:,} bản ghi)
 *Bài báo tham chiếu: "Random Forest-Based Network Intrusion Detection with Feature Selection and Class Balancing on UNSW-NB15 Traffic" (MDPI Information 2026).*
 
 ---
@@ -583,11 +633,7 @@ Dự án Nghiên cứu & Tái lập Hệ thống NIDS trên tập dữ liệu **
 ### Phát hiện 1: Đặc tính Mất cân bằng Lớp Cực đoan (Extreme Class Imbalance)
 - **Số liệu thực tế:** Trong tổng số **{n_total:,}** mẫu của tập huấn luyện (`Train Set`), lưu lượng bình thường `Benign` chiếm áp đảo tuyệt đối **{n_benign:,} mẫu ({n_benign/n_total*100:.2f}%)**, trong khi toàn bộ 9 loại tấn công gộp lại chỉ chiếm **{n_attack:,} mẫu ({n_attack/n_total*100:.2f}%)** (tỷ lệ mất cân bằng chung **1 : {n_benign/n_attack:.1f}**).
 - **Phân hóa nội bộ các lớp tấn công:** Khi phân tách nhị phân theo phương pháp bài báo, tỷ lệ mất cân bằng tăng vọt lên mức cực đoan:
-  - `Exploits`: 16,832 mẫu $\\rightarrow$ **1 : 63**
-  - `Reconnaissance`: 8,364 mẫu $\\rightarrow$ **1 : 126**
-  - `DoS`: 3,437 mẫu $\\rightarrow$ **1 : 307**
-  - `Analysis`: 1,358 mẫu $\\rightarrow$ **1 : 777**
-  - `Backdoor`: 1,213 mẫu $\\rightarrow$ **1 : 870**
+{imbalance_bullets}
 - **Ý nghĩa kỹ thuật:** Tỷ lệ mất cân bằng lên tới hàng trăm lần là nguyên nhân chính khiến chỉ số *Accuracy* trở nên vô nghĩa (mô hình đoán bừa 100% Benign vẫn đạt >99.8% Accuracy). Mọi tối ưu bắt buộc phải căn cứ theo **F1-Score, Precision, Recall và Ma trận Nhầm lẫn**.
 
 ---
@@ -595,7 +641,7 @@ Dự án Nghiên cứu & Tái lập Hệ thống NIDS trên tập dữ liệu **
 ### Phát hiện 2: Tính Đa cộng tuyến & Cặp Đặc trưng Tương quan Cực cao
 - **Số liệu thực tế:** Ma trận tương quan Pearson trên 10 đặc trưng lưu lượng mạng (`FEATURE_COLS`) phát hiện cặp biến đồng biến gần như hoàn hảo:
   - **`{high_corrs[0][0]}`** và **`{high_corrs[0][1]}`**: Hệ số tương quan $r = \\mathbf{{{high_corrs[0][2]:.4f}}}$.
-  - Ngoài ra, cặp `IN_PKTS` và `OUT_PKTS` đạt $r = 0.7444$, cặp `IN_BYTES` và `IN_PKTS` đạt $r = 0.6985$.
+  - Ngoài ra, cặp `IN_PKTS` và `OUT_PKTS` đạt $r = {r_in_out_pkts:.4f}$, cặp `IN_BYTES` và `IN_PKTS` đạt $r = {r_in_bytes_pkts:.4f}$.
 - **Ý nghĩa kỹ thuật:** Trong thuật toán Random Forest, việc đưa cả hai biến tương quan > 0.95 vào mô hình không làm giảm chất lượng dự đoán (do cây phân nhánh ngẫu nhiên `max_features`), nhưng làm **phân tán điểm số quan trọng (Feature Importance)** và tăng chi phí tính toán. Thuật toán `SelectKBest` với Mutual Information giúp tinh lọc và loại bỏ sự dư thừa này ở các mức $k=3, 5, 7$.
 
 ---
@@ -612,20 +658,16 @@ Bảng tính điểm Mutual Information (không dùng SMOTE) chỉ ra mỗi lo�
 
 ### Phát hiện 4: Tính Nhất quán Tuyệt đối của Phân chia Dữ liệu (Zero Data Drift)
 - Quá trình phân tầng có kiểm soát (`StratifiedShuffleSplit`, `random_state=10`) bảo toàn tỷ lệ từng loại tấn công qua cả 3 tập độc lập:
-  - `Train Set` ({len(train_df):,} mẫu - **68.05%**)
-  - `Validation Set` (155,586 mẫu - **9.59%**)
-  - `Held-out Test Set` (363,035 mẫu - **22.37%**)
-- Đường phân phối tích lũy thực nghiệm (Empirical CDF) của các đặc trưng `IN_BYTES`, `OUT_BYTES`, `FLOW_DURATION_MILLISECONDS` trên cả 3 tập trùng khớp 100%, chứng minh **không hề có hiện tượng trôi dữ liệu (Data Drift) hay rò rỉ thông tin (Data Leakage)** giữa các tập đánh giá.
+  - `Train Set` ({len(train_df):,} mẫu - **{len(train_df)/total_all*100:.2f}%**)
+  - `Validation Set` ({len(val_df):,} mẫu - **{len(val_df)/total_all*100:.2f}%**)
+  - `Held-out Test Set` ({len(test_df):,} mẫu - **{len(test_df)/total_all*100:.2f}%**)
+- Đường phân phối tích lũy thực nghiệm (Empirical CDF) của `IN_BYTES` trên cả 3 tập trùng khớp hoàn toàn, chứng minh **không hề có hiện tượng trôi dữ liệu (Data Drift) hay rò rỉ thông tin (Data Leakage)** giữa các tập đánh giá.
 
 ---
 
 ### Phát hiện 5: "Nghịch lý SMOTE" (SMOTE Paradox) trong Không gian NetFlow
-- **Thực tế thực nghiệm:** Dữ liệu đối chiếu trực tiếp giữa `Without SMOTE` và `With SMOTE (56,000)` khẳng định: **4/5 loại tấn công đạt F1-Score cao hơn khi KHÔNG dùng SMOTE!**
-  - `Backdoor`: F1 không SMOTE = **0.9535** vs có SMOTE = **0.9486** (FP tăng từ 18 lên 21).
-  - `Analysis`: F1 không SMOTE = **0.8733** vs có SMOTE = **0.8724** (FP tăng gấp 3 lần từ 3 lên 9!).
-  - `Reconnaissance`: F1 không SMOTE = **0.9673** vs có SMOTE = **0.9642** (FN tăng từ 30 lên 54).
-  - `Exploits`: F1 không SMOTE = **0.9470** vs có SMOTE = **0.9450** (FP tăng từ 413 lên 452).
-  - `DoS`: SMOTE giúp tăng nhẹ Recall (0.9097 $\\rightarrow$ 0.9177, FN giảm 102 $\\rightarrow$ 93), nhưng làm F1 giảm (0.8650 $\\rightarrow$ 0.8503) do FP tăng mạnh từ 219 lên 272.
+- **Thực tế thực nghiệm:** Dữ liệu đối chiếu trực tiếp giữa `Without SMOTE` và `With SMOTE (56,000)` khẳng định: **{wins_no_smote}/{len(TARGET_ATTACKS)} loại tấn công đạt F1-Score cao hơn khi KHÔNG dùng SMOTE!**
+{chr(10).join(smote_bullets)}
 - **Bản chất khoa học:** Kỹ thuật nội suy lân cận $k$-NN của SMOTE hoạt động kém trên không gian đặc trưng mạng chứa nhiều biến rời rạc (`discrete`) và phân cụm hẹp. SMOTE vô tình sinh ra các điểm dữ liệu nhân tạo nằm xâm lấn vào vùng ranh giới quyết định của `Benign`, dẫn đến **sự bùng nổ cảnh báo giả (False Positive Alarm Explosion)**.
 
 ---
@@ -633,11 +675,11 @@ Bảng tính điểm Mutual Information (không dùng SMOTE) chỉ ra mỗi lo�
 ### Phát hiện 6: Bài toán Đánh đổi Sinh tử trong Vận hành SOC (Table 8 Replication)
 - Trong Trung tâm Điều hành An ninh Mạng (SOC), cảnh báo giả (FP) làm quá tải chuyên viên ("alert fatigue"), nhưng cảnh báo bỏ sót (FN) lại trực tiếp dẫn tới thảm họa an ninh khi mã độc xâm nhập trót lọt.
 - Phân tích Table 8 trực quan hóa chỉ rõ:
-  1. Với `Analysis`: Mô hình không SMOTE có độ chính xác cực cao (**99.15% Precision**, chỉ 3 ca báo nhầm trên 346k mẫu Benign), nhưng lại **bỏ sót tới 98 cuộc tấn công** (Recall chỉ đạt 78.03%).
-  2. Với `DoS`: Muốn giảm 9 ca bỏ sót (từ 102 xuống 93), hệ thống phải trả giá bằng **53 ca báo giả tăng thêm** (219 lên 272).
-  3. Với `Backdoor`: Cả hai cấu hình đều đạt khả năng phát hiện vượt trội (>95% TP), nhưng Không SMOTE vẫn giữ mức cảnh báo giả thấp nhất (18 FP).
+  1. Với `Analysis`: Mô hình không SMOTE có độ chính xác cực cao (**{an_n['Precision']*100:.2f}% Precision**, chỉ {int(an_n['FP'])} ca báo nhầm trên {n_test_benign:,} mẫu Benign), nhưng lại **bỏ sót tới {int(an_n['FN'])} cuộc tấn công** (Recall đạt {an_n['Recall']*100:.2f}%).
+  2. Với `DoS`: Muốn giảm {int(dos_n['FN']) - int(dos_s['FN'])} ca bỏ sót (từ {int(dos_n['FN'])} xuống {int(dos_s['FN'])}), hệ thống SMOTE phải trả giá bằng **{int(dos_s['FP']) - int(dos_n['FP'])} ca báo giả tăng thêm** ({int(dos_n['FP'])} lên {int(dos_s['FP'])}).
+  3. Với `Backdoor`: Cả hai cấu hình đều đạt khả năng phát hiện cao (>94% Recall), nhưng Không SMOTE giữ mức cảnh báo giả thấp nhất ({int(bd_n['FP'])} FP).
 - **Kết luận định hướng Giai đoạn 2:** Không thể giải quyết bài toán bỏ sót FN bằng việc lạm dụng SMOTE. Cần chuyển hướng sang:
-  1. Mô hình Gradient Boosting (`HistGradientBoosting` / `XGBoost` / `LightGBM`) với khả năng học ranh giới phi tuyến tốt hơn.
+  1. Mô hình Gradient Boosting (`HistGradientBoosting`) với khả năng học ranh giới phi tuyến tốt và tốc độ vượt trội.
   2. Kỹ thuật **Dò ngưỡng theo Recall mục tiêu** ($R \\ge 0.95, 0.98, 0.99$).
   3. **Mô hình nhạy chi phí (Cost-Sensitive Learning)** gán trọng số thiệt hại $c \\times FN$ cao hơn $FP$.
 
@@ -691,13 +733,13 @@ def main():
     plot_fig06_rf_smote_vs_nosmote(summary_df, FIGURES_DIR / "fig06_rf_smote_vs_nosmote_comparison.png")
     
     # 7. Hình 7
-    plot_fig07_rf_k_sensitivity(RESULTS_DIR, FIGURES_DIR / "fig07_rf_k_sensitivity.png")
+    plot_fig07_rf_k_sensitivity(RESULTS_DIR, val_df, FIGURES_DIR / "fig07_rf_k_sensitivity.png")
     
     # 8. Hình 8
-    plot_fig08_rf_confusion_matrices_table8(RESULTS_DIR, summary_df, FIGURES_DIR / "fig08_rf_confusion_matrices_table8.png")
+    plot_fig08_rf_confusion_matrices_table8(RESULTS_DIR, FIGURES_DIR / "fig08_rf_confusion_matrices_table8.png")
     
     # 9. Báo cáo Findings
-    generate_findings_report(train_df, mi_df, summary_df, RESULTS_DIR / "eda_and_baseline_findings.md")
+    generate_findings_report(train_df, val_df, test_df, mi_df, summary_df, RESULTS_DIR / "eda_and_baseline_findings.md")
     
     total_time = time.perf_counter() - start_time
     print("=" * 75)

@@ -19,8 +19,15 @@ ENV/
 # Temporary and OS files
 *.tmp
 *.log
+*.bak
 .DS_Store
 Thumbs.db
+audit_tmp/
+
+# Test coverage & packaging artifacts
+.coverage
+htmlcov/
+*.egg-info/
 
 # Large dataset files (Raw & Processed)
 data/*.csv

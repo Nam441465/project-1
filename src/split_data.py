@@ -1,10 +1,12 @@
+import argparse
+import gc
 from pathlib import Path
 import json
 import time
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-def split_dataset():
+def split_dataset(random_state: int = 10):
     base_dir = Path(__file__).resolve().parent.parent
     data_path = base_dir / "data" / "NF-UNSW-NB15.csv"
     output_dir = base_dir / "data" / "processed"
@@ -27,6 +29,7 @@ def split_dataset():
     print("\n[*] Phân bố toàn bộ nhãn tấn công (Attack):")
     total_dist = df["Attack"].value_counts()
     print(total_dist)
+    total_rows = len(df)
     
     # Tỷ lệ phân chia theo bài báo (MDPI Information 2026, 17(9), 836 - Table 1):
     # Tập gốc của tác giả: Train = 175,341; Test = 82,332 -> Tổng = 257,673
@@ -36,27 +39,30 @@ def split_dataset():
     val_within_test_ratio = 0.30
     heldout_within_test_ratio = 0.70
     
-    print(f"\n[*] Bắt đầu phân chia dữ liệu (random_state=10, stratify=Attack):")
+    print(f"\n[*] Bắt đầu phân chia dữ liệu (random_state={random_state}, stratify=Attack):")
     print(f"    - Tỷ lệ Train/Test ban đầu: {1-test_ratio:.4%} / {test_ratio:.4%}")
     
-    # Bước 1: Chia Train và Test partition
+    # Bước 1: Chia Train và Test partition, giải phóng ngay df gốc
     train_df, test_partition_df = train_test_split(
         df,
         test_size=test_ratio,
-        random_state=10,
+        random_state=random_state,
         stratify=df["Attack"]
     )
+    del df
+    gc.collect()
     
-    # Bước 2: Chia Test partition thành Validation (30%) và Held-out Test (70%)
+    # Bước 2: Chia Test partition thành Validation (30%) và Held-out Test (70%), giải phóng test_partition_df
     # test_size=0.70 nghĩa là Held-out = 70%, phần còn lại là Validation = 30%
     val_df, heldout_test_df = train_test_split(
         test_partition_df,
         test_size=heldout_within_test_ratio,
-        random_state=10,
+        random_state=random_state,
         stratify=test_partition_df["Attack"]
     )
+    del test_partition_df
+    gc.collect()
     
-    total_rows = len(df)
     print("\n[+] Kết quả phân chia số lượng mẫu:")
     print(f"    - Tổng dữ liệu:       {total_rows:>9,} mẫu (100.00%)")
     print(f"    - Train set:          {len(train_df):>9,} mẫu ({len(train_df)/total_rows:.2%})")
@@ -90,7 +96,7 @@ def split_dataset():
     
     metadata = {
         "dataset_name": "NF-UNSW-NB15",
-        "random_state": 10,
+        "random_state": int(random_state),
         "total_records": total_rows,
         "train_records": len(train_df),
         "val_records": len(val_df),
@@ -108,4 +114,7 @@ def split_dataset():
     print(f"[+] Đã lưu toàn bộ file thành công trong {time.perf_counter() - save_start:.2f}s!")
 
 if __name__ == "__main__":
-    split_dataset()
+    parser = argparse.ArgumentParser(description="Phân chia dữ liệu NF-UNSW-NB15 thành Train / Val / Held-out Test")
+    parser.add_argument("--random_state", type=int, default=10, help="Random seed cho stratified split (mặc định: 10)")
+    args = parser.parse_args()
+    split_dataset(random_state=args.random_state)

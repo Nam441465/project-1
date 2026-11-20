@@ -24,14 +24,18 @@ import pandas as pd
 from sklearn.metrics import average_precision_score, precision_recall_curve, precision_score, recall_score
 
 PAPER_SRC_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = PAPER_SRC_DIR.parent.parent
+SRC_DIR = PAPER_SRC_DIR.parent
+PROJECT_ROOT = SRC_DIR.parent
+
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from pipeline_utils import TARGET_ATTACKS, evaluate_binary_predictions, vectorized_threshold_metrics
 
 PAPER_DIR = PROJECT_ROOT / "results" / "paper_original"
 FIGURES_OUT_DIR = PAPER_DIR / "figures"
 BASELINE_DIR = PROJECT_ROOT / "results" / "baseline"
 IMPROVED_DIR = PROJECT_ROOT / "results" / "improved"
-
-TARGET_ATTACKS = ["DoS", "Exploits", "Backdoor", "Analysis", "Reconnaissance"]
 
 
 def setup_matplotlib_style():
@@ -201,6 +205,8 @@ def build_comparison_tables() -> tuple:
     df_3sys.to_csv(PAPER_DIR / "three_systems_comparison.csv", index=False)
 
     # 2. Bảng đối sánh vận hành SOC tại c=10 (Cost = 10*FN + 1*FP)
+    # Bổ sung ablation Paper-Exact RF tại c=10 để tách rạch ròi lợi ích đổi ngưỡng vs đổi pipeline/mô hình
+    t_grid_c10 = np.round(np.linspace(0.005, 0.995, 199), 3)
     soc_rows = []
     for att in TARGET_ATTACKS:
         p_no = df_3sys[(df_3sys["Attack"] == att) & (df_3sys["Condition"] == "Without SMOTE")].iloc[0]
@@ -217,6 +223,21 @@ def build_comparison_tables() -> tuple:
             & (cost_df["Cost_Ratio_c"] == 10)
         ].iloc[0]
 
+        # Ablation: Paper-Exact RF tối ưu ngưỡng c=10 trên tập Validation (dùng .npy hiện có, không retrain)
+        y_val_p = np.load(PAPER_DIR / f"paper_rf_{att.lower()}_nosmote_y_val.npy")
+        p_val_p = np.load(PAPER_DIR / f"paper_rf_{att.lower()}_nosmote_best_proba_val.npy")
+        y_test_p = np.load(PAPER_DIR / f"paper_rf_{att.lower()}_nosmote_y_test.npy")
+        p_test_p = np.load(PAPER_DIR / f"paper_rf_{att.lower()}_nosmote_best_proba_test.npy")
+
+        val_m_p = vectorized_threshold_metrics(y_val_p, p_val_p, t_grid_c10)
+        costs_val_p = 10 * val_m_p["fn"] + val_m_p["fp"]
+        t_paper_c10 = float(t_grid_c10[int(np.argmin(costs_val_p))])
+        eval_paper_c10 = evaluate_binary_predictions(y_test_p, p_test_p, t_paper_c10)
+
+        paper_c10_fn = int(eval_paper_c10["FN"])
+        paper_c10_fp = int(eval_paper_c10["FP"])
+        paper_c10_cost = int(10 * paper_c10_fn + paper_c10_fp)
+
         paper_cost_no = int(p_no["Paper_SOC_Cost_c10"])
         paper_cost_sm = int(p_sm["Paper_SOC_Cost_c10"])
         ours_rf_cost_c10 = int(rf_c10["Cost_Optimal"])
@@ -231,6 +252,10 @@ def build_comparison_tables() -> tuple:
             "Paper_SMOTE_FN": int(p_sm["Paper_FN"]),
             "Paper_SMOTE_FP": int(p_sm["Paper_FP"]),
             "Paper_SMOTE_Cost_c10": paper_cost_sm,
+            "PaperRF_CostOpt_Threshold": round(t_paper_c10, 3),
+            "PaperRF_CostOpt_FN": paper_c10_fn,
+            "PaperRF_CostOpt_FP": paper_c10_fp,
+            "PaperRF_CostOpt_Cost_c10": paper_c10_cost,
             "OursRF_CostOpt_Threshold": float(rf_c10["Optimal_Threshold"]),
             "OursRF_CostOpt_FN": int(rf_c10["FN"]),
             "OursRF_CostOpt_FP": int(rf_c10["FP"]),
@@ -240,11 +265,23 @@ def build_comparison_tables() -> tuple:
             "OursGB_CostOpt_FP": int(gb_c10["FP"]),
             "OursGB_CostOpt_Cost_c10": ours_gb_cost_c10,
             "FN_Saved_OursRFCost_vs_PaperNoSMOTE": int(p_no["Paper_FN"]) - int(rf_c10["FN"]),
+            "FN_Saved_Thresholding_PaperRF": int(p_no["Paper_FN"]) - paper_c10_fn,
+            "FN_Saved_ModelPipeline_OursRF_vs_PaperRFCost": paper_c10_fn - int(rf_c10["FN"]),
+            "FN_Saved_ModelPipeline_OursGB_vs_PaperRFCost": paper_c10_fn - int(gb_c10["FN"]),
+            "Cost_Saved_Pct_PaperRFCost_vs_PaperNoSMOTE": round(
+                (paper_cost_no - paper_c10_cost) / max(paper_cost_no, 1) * 100.0, 2
+            ),
             "Cost_Saved_Pct_OursRFCost_vs_PaperNoSMOTE": round(
                 (paper_cost_no - ours_rf_cost_c10) / max(paper_cost_no, 1) * 100.0, 2
             ),
             "Cost_Saved_Pct_OursGBCost_vs_PaperNoSMOTE": round(
                 (paper_cost_no - ours_gb_cost_c10) / max(paper_cost_no, 1) * 100.0, 2
+            ),
+            "Cost_Saved_Pct_OursRFCost_vs_PaperRFCost": round(
+                (paper_c10_cost - ours_rf_cost_c10) / max(paper_c10_cost, 1) * 100.0, 2
+            ),
+            "Cost_Saved_Pct_OursGBCost_vs_PaperRFCost": round(
+                (paper_c10_cost - ours_gb_cost_c10) / max(paper_c10_cost, 1) * 100.0, 2
             ),
         })
 
@@ -543,59 +580,70 @@ def plot_fig_p03_pr_curves_three_systems(df_3sys: pd.DataFrame, out_path: Path):
 
 
 def plot_fig_p04_soc_cost_and_fn(df_soc: pd.DataFrame, out_path: Path):
-    """Hình P4 (1x2): Đối sánh số mẫu tấn công lọt lưới (FN) và Chi phí vận hành SOC (c=10) so với Paper-Exact."""
+    """Hình P4 (1x2): Đối sánh 4 cấu hình (Paper F1-Opt, Paper Cost-Opt c=10, Ours RF c=10, Ours HistGB c=10) tách riêng lợi ích ngưỡng vs pipeline."""
     setup_matplotlib_style()
     df_s = df_soc.set_index("Attack").loc[TARGET_ATTACKS].reset_index()
     x = np.arange(len(TARGET_ATTACKS))
-    w = 0.26
+    w = 0.20
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16.5, 6.3))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(17.5, 6.6))
 
     # Panel trái: Số mẫu bỏ sót False Negatives (FN)
-    b1 = ax1.bar(x - w, df_s["Paper_NoSMOTE_FN"], w, label="1. Paper-Exact RF (Ngưỡng F1: 0.05..0.94)", color="#d62728", edgecolor="#2c3e50", alpha=0.9, zorder=3)
-    b2 = ax1.bar(x, df_s["OursRF_CostOpt_FN"], w, label="2. Ours RF Cost-Sensitive (c=10)", color="#1f77b4", edgecolor="#2c3e50", alpha=0.9, zorder=3)
-    b3 = ax1.bar(x + w, df_s["OursGB_CostOpt_FN"], w, label="3. Ours HistGB Cost-Sensitive (c=10)", color="#2ca02c", edgecolor="#2c3e50", alpha=0.9, zorder=3)
+    b1 = ax1.bar(x - 1.5 * w, df_s["Paper_NoSMOTE_FN"], w, label="1. Paper-Exact RF (F1-Opt: 0.05..0.94)", color="#d62728", edgecolor="#2c3e50", alpha=0.9, zorder=3)
+    b2 = ax1.bar(x - 0.5 * w, df_s["PaperRF_CostOpt_FN"], w, label="2. Paper-Exact RF (Cost-Opt c=10)", color="#ff7f0e", edgecolor="#2c3e50", alpha=0.9, zorder=3)
+    b3 = ax1.bar(x + 0.5 * w, df_s["OursRF_CostOpt_FN"], w, label="3. Ours RF (Cost-Opt c=10)", color="#1f77b4", edgecolor="#2c3e50", alpha=0.9, zorder=3)
+    b4 = ax1.bar(x + 1.5 * w, df_s["OursGB_CostOpt_FN"], w, label="4. Ours HistGB (Cost-Opt c=10)", color="#2ca02c", edgecolor="#2c3e50", alpha=0.9, zorder=3)
 
     ax1.set_xticks(x)
     ax1.set_xticklabels(TARGET_ATTACKS, fontweight="bold")
-    ax1.set_ylim(0, max(df_s["Paper_NoSMOTE_FN"].max(), df_s["OursGB_CostOpt_FN"].max()) * 1.22)
+    max_fn = max(df_s["Paper_NoSMOTE_FN"].max(), df_s["PaperRF_CostOpt_FN"].max(), df_s["OursRF_CostOpt_FN"].max(), df_s["OursGB_CostOpt_FN"].max())
+    ax1.set_ylim(0, max_fn * 1.24)
     ax1.set_ylabel("Số Cuộc Tấn Công Lọt Lưới (False Negatives - FN)", fontweight="bold")
-    ax1.set_title("A. Cắt giảm Tấn công Lọt lưới (FN) so với Ngưỡng F1 Bài báo Gốc", pad=12)
+    ax1.set_title("A. Tách riêng Giảm FN do Đổi Ngưỡng (c=10) vs Đổi Pipeline/Mô hình", pad=12)
     ax1.grid(axis="y", zorder=0)
-    ax1.legend(loc="upper right", fontsize=8.3)
+    ax1.legend(loc="upper right", fontsize=8.0)
 
-    for bars, col in [(b1, "#a61c1c"), (b2, "#155d8b"), (b3, "#1e7e34")]:
+    for bars, col in [(b1, "#a61c1c"), (b2, "#b35900"), (b3, "#155d8b"), (b4, "#1e7e34")]:
         for rect in bars:
             h = int(rect.get_height())
-            ax1.text(rect.get_x() + rect.get_width() / 2.0, h + 3, f"{h}",
-                     ha="center", va="bottom", fontsize=8, fontweight="bold", color=col)
+            ax1.text(rect.get_x() + rect.get_width() / 2.0, h + 2.5, f"{h}",
+                     ha="center", va="bottom", fontsize=7.5, fontweight="bold", color=col)
 
     # Panel phải: Tổng chi phí rủi ro SOC tại c=10 (Cost = 10*FN + 1*FP)
-    c1 = ax2.bar(x - w, df_s["Paper_NoSMOTE_Cost_c10"], w, label="1. Paper-Exact RF (F1-Opt)", color="#d62728", edgecolor="#2c3e50", alpha=0.9, zorder=3)
-    c2 = ax2.bar(x, df_s["OursRF_CostOpt_Cost_c10"], w, label="2. Ours RF (Cost-Sensitive c=10)", color="#1f77b4", edgecolor="#2c3e50", alpha=0.9, zorder=3)
-    c3 = ax2.bar(x + w, df_s["OursGB_CostOpt_Cost_c10"], w, label="3. Ours HistGB (Cost-Sensitive c=10)", color="#2ca02c", edgecolor="#2c3e50", alpha=0.9, zorder=3)
+    c1 = ax2.bar(x - 1.5 * w, df_s["Paper_NoSMOTE_Cost_c10"], w, label="1. Paper-Exact RF (F1-Opt)", color="#d62728", edgecolor="#2c3e50", alpha=0.9, zorder=3)
+    c2 = ax2.bar(x - 0.5 * w, df_s["PaperRF_CostOpt_Cost_c10"], w, label="2. Paper-Exact RF (Cost-Opt c=10)", color="#ff7f0e", edgecolor="#2c3e50", alpha=0.9, zorder=3)
+    c3 = ax2.bar(x + 0.5 * w, df_s["OursRF_CostOpt_Cost_c10"], w, label="3. Ours RF (Cost-Opt c=10)", color="#1f77b4", edgecolor="#2c3e50", alpha=0.9, zorder=3)
+    c4 = ax2.bar(x + 1.5 * w, df_s["OursGB_CostOpt_Cost_c10"], w, label="4. Ours HistGB (Cost-Opt c=10)", color="#2ca02c", edgecolor="#2c3e50", alpha=0.9, zorder=3)
 
     ax2.set_xticks(x)
     ax2.set_xticklabels(TARGET_ATTACKS, fontweight="bold")
-    ax2.set_ylim(0, max(df_s["Paper_NoSMOTE_Cost_c10"].max(), df_s["OursGB_CostOpt_Cost_c10"].max()) * 1.28)
+    max_cost = max(df_s["Paper_NoSMOTE_Cost_c10"].max(), df_s["PaperRF_CostOpt_Cost_c10"].max(), df_s["OursRF_CostOpt_Cost_c10"].max(), df_s["OursGB_CostOpt_Cost_c10"].max())
+    ax2.set_ylim(0, max_cost * 1.32)
     ax2.set_ylabel("Tổng Chi phí Rủi ro SOC: Cost = 10 × FN + 1 × FP", fontweight="bold")
-    ax2.set_title("B. Hiệu quả Kinh tế An ninh SOC (c=10) so với Paper-Exact Baseline", pad=12)
+    ax2.set_title("B. Chi phí An ninh SOC (c=10): Ablation Ngưỡng vs Mô hình", pad=12)
     ax2.grid(axis="y", zorder=0)
-    ax2.legend(loc="upper right", fontsize=8.3)
+    ax2.legend(loc="upper right", fontsize=8.0)
+
+    for bars, col in [(c1, "#a61c1c"), (c2, "#b35900"), (c3, "#155d8b"), (c4, "#1e7e34")]:
+        for rect in bars:
+            h = int(rect.get_height())
+            ax2.text(rect.get_x() + rect.get_width() / 2.0, h + 25, f"{h:,}",
+                     ha="center", va="bottom", fontsize=6.8, fontweight="bold", color=col, rotation=90)
 
     for i in range(len(TARGET_ATTACKS)):
-        pct = df_s.loc[i, "Cost_Saved_Pct_OursRFCost_vs_PaperNoSMOTE"]
-        top_h = max(df_s.loc[i, "Paper_NoSMOTE_Cost_c10"], df_s.loc[i, "OursRF_CostOpt_Cost_c10"])
-        badge_col = "#e8f5e9" if pct >= 0 else "#fdecea"
-        edge_col = "#2e7d32" if pct >= 0 else "#c0392b"
+        pct_total = df_s.loc[i, "Cost_Saved_Pct_OursRFCost_vs_PaperNoSMOTE"]
+        pct_thresh = df_s.loc[i, "Cost_Saved_Pct_PaperRFCost_vs_PaperNoSMOTE"]
+        top_h = max(df_s.loc[i, "Paper_NoSMOTE_Cost_c10"], df_s.loc[i, "PaperRF_CostOpt_Cost_c10"], df_s.loc[i, "OursRF_CostOpt_Cost_c10"])
+        badge_col = "#e8f5e9" if pct_total >= 0 else "#fdecea"
+        edge_col = "#2e7d32" if pct_total >= 0 else "#c0392b"
         ax2.text(
-            x[i] - w / 2.0, top_h + 70,
-            f"Ours RF tiết kiệm\n{pct:+.1f}% chi phí",
-            ha="center", va="bottom", fontsize=7.5, fontweight="bold",
+            x[i], top_h + 260,
+            f"Δc=10: {pct_thresh:+.1f}%\nOursRF: {pct_total:+.1f}%",
+            ha="center", va="bottom", fontsize=7.2, fontweight="bold",
             bbox=dict(boxstyle="round,pad=0.25", facecolor=badge_col, edgecolor=edge_col, lw=0.9),
         )
 
-    plt.suptitle("GIÁ TRỊ VẬN HÀNH THỰC TIỄN: CHỐNG BỎ SÓT TẤN CÔNG (FN) & TỐI ƯU CHI PHÍ SOC SO VỚI BÀI BÁO GỐC",
+    plt.suptitle("ABLATION VẬN HÀNH SOC (c=10): TÁCH LỢI ÍCH CHỈNH NGƯỠNG VS CẢI TIẾN MÔ HÌNH / PIPELINE",
                  fontsize=12.8, fontweight="bold", y=0.98)
     plt.tight_layout(rect=[0, 0, 1, 0.94])
     plt.savefig(out_path, dpi=300)
@@ -641,7 +689,24 @@ def generate_markdown_report(df_3sys: pd.DataFrame, df_soc: pd.DataFrame, df_mi_
                 f"{r['Paper_Recall']:.4f} | **{r['Paper_F1']:.4f}** | {int(r['Paper_FP']):,} | {int(r['Paper_FN']):,} | "
                 f"{r['Paper_BestK_Total_Time_s']:.1f}s |"
             )
-    lines.append(f"\n> **Nhận xét Tái lập Paper-Exact:** Ngay trên chính pipeline nguyên bản 100% của Pospíchal et al. khi áp dụng lên luồng `NF-UNSW-NB15`, cấu hình **Without SMOTE giành chiến thắng trên {wins_nosmote_paper}/5 loại tấn công** về chỉ số Test $F_1$, đồng thời tổng thời gian chạy chỉ riêng bước tìm kiếm siêu tham số `RandomizedSearchCV` qua 4 mốc $k$ tiêu tốn tới **{total_paper_search_min:.1f} phút** (cộng thêm **{total_paper_train_min:.1f} phút** huấn luyện mô hình cuối).\n")
+    # Kiểm tra chênh lệch làm tròn float64 của ngưỡng DoS trên Paper-Exact (0.42000000000000004 vs 0.42)
+    dos_y_test = np.load(PAPER_DIR / "paper_rf_dos_nosmote_y_test.npy")
+    dos_p_test = np.load(PAPER_DIR / "paper_rf_dos_nosmote_best_proba_test.npy")
+    dos_row_no = df_no[df_no["Attack"] == "DoS"].iloc[0]
+    dos_fn_csv = int(dos_row_no["Paper_FN"])
+    dos_fp_csv = int(dos_row_no["Paper_FP"])
+    dos_fn_exact042 = int(evaluate_binary_predictions(dos_y_test, dos_p_test, float(dos_row_no["Paper_Threshold"]))["FN"])
+    dos_fp_exact042 = int(evaluate_binary_predictions(dos_y_test, dos_p_test, float(dos_row_no["Paper_Threshold"]))["FP"])
+
+    lines.append(
+        f"\n> **Nhận xét Tái lập Paper-Exact:** Ngay trên chính pipeline nguyên bản 100% của Pospíchal et al. khi áp dụng lên luồng `NF-UNSW-NB15`, "
+        f"cấu hình **Without SMOTE giành chiến thắng trên {wins_nosmote_paper}/5 loại tấn công** về chỉ số Test $F_1$, đồng thời tổng thời gian chạy chỉ riêng bước tìm kiếm siêu tham số "
+        f"`RandomizedSearchCV` qua 4 mốc $k$ tiêu tốn tới **{total_paper_search_min:.1f} phút** (cộng thêm **{total_paper_train_min:.1f} phút** huấn luyện mô hình cuối).\n"
+    )
+    lines.append(
+        f"> **Lưu ý kỹ thuật về trôi dấu chấm động `np.arange` trên `DoS`:** Phiên bản gốc `train_paper_rf.py` dùng `np.arange(0.05, 0.95, 0.01)` nên tại bước 37 sinh giá trị IEEE-754 "
+        f"`0.42000000000000004` (cho `FN={dos_fn_csv}`, `FP={dos_fp_csv}` được ghi trong CSV), trong khi đọc lại ngưỡng làm tròn `0.42` (`>= 0.42`) cho `FN={dos_fn_exact042}`, `FP={dos_fp_exact042}`.\n"
+    )
 
     lines.append("---\n")
     lines.append("## 3. Đối Sánh Trực Tiếp 3 Hệ Thống (Điều Kiện Chuẩn Without SMOTE)\n")
@@ -692,19 +757,34 @@ def generate_markdown_report(df_3sys: pd.DataFrame, df_soc: pd.DataFrame, df_mi_
     lines.append("- Hệ thống **Ours Improved RF** cắt giảm hàng chục lần thời gian tìm kiếm siêu tham số nhờ lấy mẫu phân tầng `150,000` dòng khi dò tham số rồi mới huấn luyện 100% dữ liệu, mà **không hề làm giảm (thậm chí cải thiện nhẹ) điểm $F_1$ trên Held-out Test**.")
     lines.append("- Đặc biệt, hệ thống **Ours HistGradientBoosting** đạt mức tăng tốc toàn diện từ hàng chục đến hàng trăm lần so với Paper-Exact Pipeline, biến việc tái huấn luyện mô hình liên tục (Continuous Retraining) hàng giờ thành vài giây.\n")
 
-    # Phát hiện 4: Vận hành SOC c=10
+    # Phát hiện 4: Vận hành SOC c=10 (bao gồm ablation Paper-Exact RF tại c=10)
     lines.append("### 4.4. Phát hiện 4: Giới hạn của Dải ngưỡng `0.05..0.94` Tối ưu Thuần $F_1$ vs Tối ưu Chi phí Vận hành SOC ($c=10$)\n")
-    lines.append("- Bài báo gốc giới hạn dải quét ngưỡng ở `[0.05, 0.94]` và chỉ tối ưu điểm $F_1$ đối xứng (coi trọng số lỗi bỏ sót tấn công `FN` ngang bằng với báo nhầm `FP`). Trong môi trường SOC thực chiến ($c=10$: 1 cuộc tấn công lọt lưới gây thiệt hại gấp 10 lần 1 cảnh báo giả), hệ thống nhạy chi phí của chúng ta cắt giảm sâu cả số cuộc tấn công lọt lưới lẫn tổng chi phí rủi ro:\n")
-    lines.append("| Loại Tấn công | Paper-Exact RF (`FN` / `FP` / `Cost c=10`) | Ours RF Cost-Opt $c=10$ (`FN` / `FP` / `Cost c=10`) | Ours HistGB Cost-Opt $c=10$ (`FN` / `FP` / `Cost c=10`) | **Số Tấn công Cứu thêm (Ours RF vs Paper)** | **Tiết kiệm Chi phí SOC (Ours RF vs Paper)** |")
-    lines.append("| :--- | :---: | :---: | :---: | :---: | :---: |")
+    lines.append("- Bài báo gốc giới hạn dải quét ngưỡng ở `[0.05, 0.94]` và chỉ tối ưu điểm $F_1$ đối xứng (coi trọng số lỗi bỏ sót tấn công `FN` ngang bằng với báo nhầm `FP`). Để tách bạch **lợi ích do đổi hàm mục tiêu chỉnh ngưỡng** khỏi **lợi ích do cải tiến pipeline/mô hình**, bảng dưới đây bổ sung thêm đối chứng **Paper-Exact RF (Cost-Opt $c=10$)** sử dụng chính vector xác suất của mô hình bài báo gốc trên lưới `0.005..0.995`:\n")
+    lines.append("| Loại Tấn công | Paper-Exact RF F1-Opt (`t`, `FN`/`FP`/`Cost`) | Paper-Exact RF Cost-Opt $c=10$ (`t*`, `FN`/`FP`/`Cost`) | Ours RF Cost-Opt $c=10$ (`t*`, `FN`/`FP`/`Cost`) | Ours HistGB Cost-Opt $c=10$ (`t*`, `FN`/`FP`/`Cost`) | **Cứu FN: Đổi ngưỡng / Đổi Pipeline (Ours RF)** | **Tiết kiệm Chi phí (Ours RF vs Paper F1 / vs Paper c=10)** |")
+    lines.append("| :--- | :---: | :---: | :---: | :---: | :---: | :---: |")
     for _, s in df_soc.iterrows():
         lines.append(
-            f"| **{s['Attack']}** | {int(s['Paper_NoSMOTE_FN'])} / {int(s['Paper_NoSMOTE_FP'])} / **{int(s['Paper_NoSMOTE_Cost_c10']):,}** | "
-            f"**{int(s['OursRF_CostOpt_FN'])}** / {int(s['OursRF_CostOpt_FP'])} / **{int(s['OursRF_CostOpt_Cost_c10']):,}** | "
-            f"{int(s['OursGB_CostOpt_FN'])} / {int(s['OursGB_CostOpt_FP'])} / {int(s['OursGB_CostOpt_Cost_c10']):,} | "
-            f"**Cứu thêm {int(s['FN_Saved_OursRFCost_vs_PaperNoSMOTE']):+d} cuộc tấn công** | "
-            f"**{s['Cost_Saved_Pct_OursRFCost_vs_PaperNoSMOTE']:+.2f}%** |"
+            f"| **{s['Attack']}** | `{s['Paper_NoSMOTE_Threshold']:.2f}`: {int(s['Paper_NoSMOTE_FN'])} / {int(s['Paper_NoSMOTE_FP'])} / **{int(s['Paper_NoSMOTE_Cost_c10']):,}** | "
+            f"`{s['PaperRF_CostOpt_Threshold']:.3f}`: {int(s['PaperRF_CostOpt_FN'])} / {int(s['PaperRF_CostOpt_FP'])} / **{int(s['PaperRF_CostOpt_Cost_c10']):,}** | "
+            f"`{s['OursRF_CostOpt_Threshold']:.3f}`: **{int(s['OursRF_CostOpt_FN'])}** / {int(s['OursRF_CostOpt_FP'])} / **{int(s['OursRF_CostOpt_Cost_c10']):,}** | "
+            f"`{s['OursGB_CostOpt_Threshold']:.3f}`: {int(s['OursGB_CostOpt_FN'])} / {int(s['OursGB_CostOpt_FP'])} / {int(s['OursGB_CostOpt_Cost_c10']):,} | "
+            f"{int(s['FN_Saved_Thresholding_PaperRF']):+d} / {int(s['FN_Saved_ModelPipeline_OursRF_vs_PaperRFCost']):+d} | "
+            f"**{s['Cost_Saved_Pct_OursRFCost_vs_PaperNoSMOTE']:+.2f}%** / {s['Cost_Saved_Pct_OursRFCost_vs_PaperRFCost']:+.2f}% |"
         )
+    tot_p_f1_fn = int(df_soc["Paper_NoSMOTE_FN"].sum())
+    tot_p_f1_cost = int(df_soc["Paper_NoSMOTE_Cost_c10"].sum())
+    tot_p_c10_fn = int(df_soc["PaperRF_CostOpt_FN"].sum())
+    tot_p_c10_cost = int(df_soc["PaperRF_CostOpt_Cost_c10"].sum())
+    tot_rf_c10_fn = int(df_soc["OursRF_CostOpt_FN"].sum())
+    tot_rf_c10_cost = int(df_soc["OursRF_CostOpt_Cost_c10"].sum())
+    tot_gb_c10_fn = int(df_soc["OursGB_CostOpt_FN"].sum())
+    tot_gb_c10_cost = int(df_soc["OursGB_CostOpt_Cost_c10"].sum())
+    thresh_pct = (tot_p_f1_cost - tot_p_c10_cost) / max(tot_p_f1_cost, 1) * 100.0
+    lines.append(
+        f"\n> **Tổng kết Ablation trên cả 5 tấn công ($c=10$):**\n"
+        f"> - **1. Lợi ích thuần từ chỉnh ngưỡng (`Paper-Exact RF F1-Opt` $\\rightarrow$ `Paper-Exact RF c=10`):** Tổng `FN` giảm từ **{tot_p_f1_fn} $\\rightarrow$ {tot_p_c10_fn}** (cứu thêm **{tot_p_f1_fn - tot_p_c10_fn}** cuộc tấn công), tổng chi phí SOC giảm từ **{tot_p_f1_cost:,} $\\rightarrow$ {tot_p_c10_cost:,}** (**-{thresh_pct:.2f}%**).\n"
+        f"> - **2. Lợi ích từ cải tiến Pipeline/Mô hình (cùng chế độ `c=10`):** Tổng `FN` tiếp tục giảm từ **{tot_p_c10_fn} $\\rightarrow$ {tot_rf_c10_fn}** trên `Ours RF` (tổng chi phí **{tot_rf_c10_cost:,}**) và **{tot_p_c10_fn} $\\rightarrow$ {tot_gb_c10_fn}** trên `Ours HistGB` (tổng chi phí **{tot_gb_c10_cost:,}** với tốc độ search+fit nhanh hơn hàng chục lần).\n"
+    )
     lines.append("")
 
     lines.append("---\n")

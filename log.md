@@ -41,7 +41,7 @@
     - `Exploits (Without SMOTE)`: F1 tăng từ **0.9217 -> 0.9328** (Precision = 0.9208, Recall = 0.9451).
     - `Analysis (Without SMOTE)`: F1 đạt **0.8690** (Precision = 0.9914, Recall = 0.7735, FP chỉ có **3 ca**!).
     - `Reconnaissance (Without SMOTE)`: F1 đạt **0.9611** (Precision = 0.9353, Recall = 0.9884).
-  - **Tốc độ huấn luyện vượt bậc:** Nhanh hơn Random Forest từ **12x đến 53x lần** (`Exploits`: 2.34s vs 123.94s - nhanh hơn **53.0x**; `Analysis`: 1.34s vs 61.27s - nhanh hơn **45.7x**; `Backdoor`: 2.03s vs 90.05s - nhanh hơn **44.4x**; `Reconnaissance`: 2.22s vs 84.44s - nhanh hơn **38.0x**).
+  - **Tốc độ huấn luyện vượt bậc:** Nhanh hơn Random Forest từ **13.17x đến 52.97x lần** ở điều kiện `Without SMOTE` (**7.77x–52.97x** trên toàn bộ 10 kịch bản; cụ thể ở Without SMOTE: `Exploits`: 2.34s vs 123.94s - **52.97x**; `Analysis`: 1.34s vs 61.27s - **45.72x**; `Backdoor`: 2.03s vs 90.05s - **44.36x**; `Reconnaissance`: 2.22s vs 84.44s - **38.04x**; `DoS`: 8.06s vs 106.12s - **13.17x**).
   - **Bản chất khoa học:** Random Forest nhỉnh hơn nhẹ ở trạng thái nguyên bản nhờ cơ chế chia nhánh tuyệt đối (exact splits) trên các biến rời rạc, nhưng `HistGradientBoosting` rút ngắn khoảng cách F1 xuống chỉ còn -0.004 đến -0.045 trong khi mang lại lợi thế thời gian huấn luyện và độ mượt ranh giới vượt trội.
 - **Kế hoạch tiếp theo:** Hoàn thành Bước 5 và chuẩn bị slide báo cáo.
 
@@ -62,7 +62,7 @@
   - **Hiệu quả kinh tế SOC:** Tại hệ số phạt thực tế $c=10$ (1 cuộc tấn công lọt lưới nguy hại bằng 10 cảnh báo giả), ngưỡng nhạy chi phí giúp **tiết kiệm từ 13.02% đến 38.10% tổng chi phí vận hành** trên cả 5 loại tấn công nguy hiểm.
   - **Bản chất vật lý mạng của FN:**
     - `DoS`: **98.0%** mẫu FN là dạng Near-Miss ($0.10 \le p < 0.76$) do dạng tấn công Slow-Rate DoS (Slowloris/Keep-alive); hạ ngưỡng chi phí cứu được gần như 100%.
-    - `Analysis`: **51.0%** mẫu FN là Deep Stealth ($p < 0.10$) do kẻ tấn công thăm dò cổng 80 (HTTP) với kích thước gói tin và thời lượng luồng giống hệt duyệt web thông thường (`IN_BYTES` trung vị 814B, `OUT_BYTES` 1,155B). Khẳng định sự cần thiết của kiến trúc kết hợp Tầng 1 (NetFlow GB) và Tầng 2 (Deep Packet Inspection).
+    - `Analysis`: **51.0%** mẫu FN là Deep Stealth ($p < 0.10$) do kẻ tấn công thăm dò cổng 80 (HTTP) với kích thước gói tin và thời lượng luồng giống hệt duyệt web thông thường (`IN_BYTES` trung vị 814B, `OUT_BYTES` 1,155B). Khẳng định vai trò của kiến trúc kết hợp Tầng 1 (NetFlow GB/RF) và định tuyến Tầng 2 (hiện triển khai quy tắc heuristic NetFlow trong Web Console và thiết kế kiến trúc chuyển tiếp sang engine DPI Zeek/Suricata ở Giai đoạn 3).
   - **Tinh chỉnh Đồ họa & Đồng bộ Số liệu (Refinement):**
     - Áp dụng quy tắc chặn ngưỡng không làm suy giảm độ phủ `t_found = min(t_f1_opt, t_found)` trong `run_recall_targeted_evaluation()`, khắc phục triệt để hiện tượng vọt lố khung hình ở Hình 11.
     - Mở rộng giới hạn trục tung logarit và điều chỉnh tọa độ text lên 0.94 ở Ô (1,2) và Ô (2,1) trong Hình 13 để hộp chú thích không đè lên các điểm outlier của Boxplot.
@@ -108,3 +108,18 @@
   - Xây dựng [src/paper_original/train_paper_rf.py](src/paper_original/train_paper_rf.py) tái hiện chính xác 100% quy trình của Pospíchal et al. (*Information* 2026, 17(9), 836) trên toàn bộ tập dữ liệu `NF-UNSW-NB15` (10 kịch bản = 5 lớp tấn công × 2 chế độ SMOTE, quét đủ 40 lượt qua $k \in \{3, 5, 7, 10\}$, tổng thời gian tính toán 87.759,8 giây ~ 24,38 giờ).
   - Xây dựng [src/paper_original/compare_and_plot_paper_vs_ours.py](src/paper_original/compare_and_plot_paper_vs_ours.py) tổng hợp các bảng đối sánh 1-đối-1 ([three_systems_comparison.csv](results/paper_original/three_systems_comparison.csv), [soc_operational_comparison_c10.csv](results/paper_original/soc_operational_comparison_c10.csv), [mi_ranking_distortion_comparison.csv](results/paper_original/mi_ranking_distortion_comparison.csv)) và 4 biểu đồ 300 DPI (`fig_p01` – `fig_p04`).
   - Hoàn thiện báo cáo tiến độ nghiên cứu học thuật [report_soict_hust.html](report_soict_hust.html) chuẩn định dạng in ấn A4 (`Ctrl + P`), đồng bộ 30 mô hình trực tuyến trên `SOC NIDS Live Console` và làm sạch repository sẵn sàng đẩy lên Git.
+
+## [2026-11-14] Giai đoạn 2 Phase 2: Tối ưu Web Console, Bộ Kiểm thử Pytest, Chẩn đoán Khoa học Package A & Đồng bộ Tài liệu
+- **Đã làm:**
+  - **Tái cấu trúc & Nâng cấp `web_app/` (`SOC NIDS Live Console`):**
+    - Tách [web_app/app.py](web_app/app.py) theo kiến trúc mô-đun với `styles.py`, `protocol_decoder.py` và gói `tabs/` (`single_flow.py`, `ab_showdown.py`, `batch_scanner.py`, `registry_findings.py`).
+    - Thêm chỉ mục khởi động nhanh [web_app/models_index.json](web_app/models_index.json) và khóa đồng bộ đa luồng `RLock` trong [web_app/inference_engine.py](web_app/inference_engine.py); khắc phục lỗi triệt tiêu vùng nghi vấn tại `t*_cost < 0.10` bằng công thức ngưỡng Near-Miss thích ứng `t_low = min(0.10, 0.5 * t*_cost)`.
+    - Triển khai **UX-1 (`analyze_tier2_dpi_heuristics`)** cung cấp phân tích heuristic NetFlow tại Tầng 2 trên Web UI và **UX-2 (`5×3` Consensus Matrix)** đối chiếu đồng thuận 15 mô hình trên Tab 1.
+  - **Hạ tầng & Kiểm thử Hồi quy (`tests/`, `pytest.ini`, `requirements-dev.txt`, `.gitattributes`):**
+    - Xây dựng bộ kiểm thử tự động **53 pytest cases** (`39` fast unit/smoke + `14` slow integration trên mô hình/dữ liệu thực tế, vượt qua 100% bên cạnh `python3 src/test_pipeline.py` 7/7 suites) và chuẩn hóa LF line endings qua `.gitattributes`.
+  - **Chẩn đoán Khoa học Package A (`src/scientific_diagnostics.py`, `src/pipeline_utils.py`):**
+    - Thực thi hiệu chuẩn Bayes prior-odds (giảm `ECE-15` của `HistGB` `39.84%–96.27%`, đưa `t*_F1` về `0.320–0.915`), khoảng tin cậy Stratified Bootstrap 95% (`B = 1.000`) + kiểm định McNemar chính xác, và đánh giá hợp nhất hỗn hợp `Any-of-5` trên toàn bộ `363,035` luồng (`Ours RF`: `0.40%` Benign FPR / `99.77%` Target-5 Recall; `Ours HistGB`: `0.41%` Benign FPR / `99.55%` Target-5 Recall; `Unseen-4`: `35.26%–36.21%`).
+    - Bổ sung hàng ablation **`Paper-Exact RF (Cost_SOC c=10)`** trong [results/paper_original/soc_operational_comparison_c10.csv](results/paper_original/soc_operational_comparison_c10.csv) (`154 FN / Cost = 3,432`, `-33.13%`), đồng thời xuất `calibration_diagnostics.csv`, `bootstrap_mcnemar_tests.csv`, `mixed_flow_orchestration_eval.csv`, `fn_forensic_analysis_all_models.csv`, [results/improved/scientific_diagnostics_findings.md](results/improved/scientific_diagnostics_findings.md), [fig14_calibration_and_bootstrap.png](figures/fig14_calibration_and_bootstrap.png) và [fig15_mixed_flow_orchestration.png](figures/fig15_mixed_flow_orchestration.png).
+  - **Đồng bộ Tài liệu (`report_soict_hust.html`, `README.md`, `REPORT.md`, `log.md`):**
+    - Chuyển đổi toàn bộ 41 biểu thức LaTeX thô trong [report_soict_hust.html](report_soict_hust.html) thành HTML ngữ nghĩa tự chứa, sửa toàn bộ đối chiếu RF vs HistGB vs PaperRF (`c=1, 5, 10, 20`), hiệu chỉnh thông lượng/độ trễ thực đo, làm rõ phạm vi Tầng 2 heuristic và cập nhật kết quả Package A.
+    - Cập nhật 4-Tab UI, `15+4 = 19` biểu đồ, `pytest`, và giải quyết toàn bộ các mục `[TODO]` trong [REPORT.md](REPORT.md).

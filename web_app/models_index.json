@@ -1,0 +1,266 @@
+{
+  "entries": {
+    "gb_analysis_smote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.015,
+        "Cost-Sensitive (c=20)": 0.015,
+        "Recall >= 95%": 0.091,
+        "Recall >= 98%": 0.028,
+        "Recall >= 99%": 0.017
+      },
+      "default_f1_threshold": 0.95,
+      "meta_mtime_ns": 1792830128791215400,
+      "p_val_mtime_ns": 1792830128745270688,
+      "y_val_mtime_ns": 1792830128758345275
+    },
+    "gb_backdoor_smote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.325,
+        "Cost-Sensitive (c=20)": 0.325,
+        "Recall >= 95%": 0.918,
+        "Recall >= 98%": 0.397,
+        "Recall >= 99%": 0.021
+      },
+      "default_f1_threshold": 0.96,
+      "meta_mtime_ns": 1792829696251588469,
+      "p_val_mtime_ns": 1792829696220584821,
+      "y_val_mtime_ns": 1792829696230640859
+    },
+    "gb_dos_smote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.41,
+        "Cost-Sensitive (c=20)": 0.18,
+        "Recall >= 95%": 0.499,
+        "Recall >= 98%": 0.243,
+        "Recall >= 99%": 0.071
+      },
+      "default_f1_threshold": 0.88,
+      "meta_mtime_ns": 1792828523981424607,
+      "p_val_mtime_ns": 1792828523940337081,
+      "y_val_mtime_ns": 1792828523951519681
+    },
+    "gb_exploits_smote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.22,
+        "Cost-Sensitive (c=20)": 0.22,
+        "Recall >= 95%": 0.69,
+        "Recall >= 98%": 0.437,
+        "Recall >= 99%": 0.325
+      },
+      "default_f1_threshold": 0.69,
+      "meta_mtime_ns": 1792829217227936596,
+      "p_val_mtime_ns": 1792829217174206383,
+      "y_val_mtime_ns": 1792829217187820771
+    },
+    "gb_reconnaissance_smote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.165,
+        "Cost-Sensitive (c=20)": 0.165,
+        "Recall >= 95%": 0.83,
+        "Recall >= 98%": 0.83,
+        "Recall >= 99%": 0.654
+      },
+      "default_f1_threshold": 0.83,
+      "meta_mtime_ns": 1792830540424512384,
+      "p_val_mtime_ns": 1792830540404257020,
+      "y_val_mtime_ns": 1792830540415508997
+    },
+    "paper_analysis_nosmote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.09,
+        "Cost-Sensitive (c=20)": 0.005,
+        "Recall >= 95%": 0.015,
+        "Recall >= 98%": 0.001,
+        "Recall >= 99%": 0.001
+      },
+      "default_f1_threshold": 0.67,
+      "meta_mtime_ns": 1793381313625173833,
+      "p_val_mtime_ns": 1793381313558419859,
+      "y_val_mtime_ns": 1793381313560288681
+    },
+    "paper_analysis_smote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.125,
+        "Cost-Sensitive (c=20)": 0.03,
+        "Recall >= 95%": 0.15,
+        "Recall >= 98%": 0.03,
+        "Recall >= 99%": 0.001
+      },
+      "default_f1_threshold": 0.94,
+      "meta_mtime_ns": 1793388262677355816,
+      "p_val_mtime_ns": 1793388262078926892,
+      "y_val_mtime_ns": 1793388262080465149
+    },
+    "paper_backdoor_nosmote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.155,
+        "Cost-Sensitive (c=20)": 0.045,
+        "Recall >= 95%": 0.28,
+        "Recall >= 98%": 0.246,
+        "Recall >= 99%": 0.092
+      },
+      "default_f1_threshold": 0.28,
+      "meta_mtime_ns": 1793355239485291873,
+      "p_val_mtime_ns": 1793355239334587620,
+      "y_val_mtime_ns": 1793355239336760235
+    },
+    "paper_backdoor_smote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.165,
+        "Cost-Sensitive (c=20)": 0.165,
+        "Recall >= 95%": 0.59,
+        "Recall >= 98%": 0.367,
+        "Recall >= 99%": 0.225
+      },
+      "default_f1_threshold": 0.59,
+      "meta_mtime_ns": 1793362790574485743,
+      "p_val_mtime_ns": 1793362790186480302,
+      "y_val_mtime_ns": 1793362790189019982
+    },
+    "paper_dos_nosmote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.155,
+        "Cost-Sensitive (c=20)": 0.06,
+        "Recall >= 95%": 0.25,
+        "Recall >= 98%": 0.082,
+        "Recall >= 99%": 0.015
+      },
+      "default_f1_threshold": 0.42,
+      "meta_mtime_ns": 1793283642835414752,
+      "p_val_mtime_ns": 1793283642073660049,
+      "y_val_mtime_ns": 1793283642077400586
+    },
+    "paper_dos_smote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.445,
+        "Cost-Sensitive (c=20)": 0.35,
+        "Recall >= 95%": 0.485,
+        "Recall >= 98%": 0.19,
+        "Recall >= 99%": 0.092
+      },
+      "default_f1_threshold": 0.58,
+      "meta_mtime_ns": 1793296433505152374,
+      "p_val_mtime_ns": 1793296432288149963,
+      "y_val_mtime_ns": 1793296432291714088
+    },
+    "paper_exploits_nosmote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.125,
+        "Cost-Sensitive (c=20)": 0.09,
+        "Recall >= 95%": 0.46,
+        "Recall >= 98%": 0.325,
+        "Recall >= 99%": 0.186
+      },
+      "default_f1_threshold": 0.46,
+      "meta_mtime_ns": 1793310003516438112,
+      "p_val_mtime_ns": 1793310002692313341,
+      "y_val_mtime_ns": 1793310002696478578
+    },
+    "paper_exploits_smote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.23,
+        "Cost-Sensitive (c=20)": 0.1,
+        "Recall >= 95%": 0.56,
+        "Recall >= 98%": 0.445,
+        "Recall >= 99%": 0.28
+      },
+      "default_f1_threshold": 0.56,
+      "meta_mtime_ns": 1793323183421509929,
+      "p_val_mtime_ns": 1793323181298842257,
+      "y_val_mtime_ns": 1793323181310317320
+    },
+    "paper_reconnaissance_nosmote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.235,
+        "Cost-Sensitive (c=20)": 0.235,
+        "Recall >= 95%": 0.48,
+        "Recall >= 98%": 0.48,
+        "Recall >= 99%": 0.48
+      },
+      "default_f1_threshold": 0.48,
+      "meta_mtime_ns": 1793394981185725321,
+      "p_val_mtime_ns": 1793394980901464912,
+      "y_val_mtime_ns": 1793394980903051354
+    },
+    "paper_reconnaissance_smote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.295,
+        "Cost-Sensitive (c=20)": 0.175,
+        "Recall >= 95%": 0.76,
+        "Recall >= 98%": 0.76,
+        "Recall >= 99%": 0.654
+      },
+      "default_f1_threshold": 0.76,
+      "meta_mtime_ns": 1793402046938439306,
+      "p_val_mtime_ns": 1793402046493583725,
+      "y_val_mtime_ns": 1793402046495118853
+    },
+    "rf_analysis_smote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.125,
+        "Cost-Sensitive (c=20)": 0.03,
+        "Recall >= 95%": 0.15,
+        "Recall >= 98%": 0.03,
+        "Recall >= 99%": 0.001
+      },
+      "default_f1_threshold": 0.94,
+      "meta_mtime_ns": 1792852300363751095,
+      "p_val_mtime_ns": 1792596062205268804,
+      "y_val_mtime_ns": 1792596062219776178
+    },
+    "rf_backdoor_smote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.165,
+        "Cost-Sensitive (c=20)": 0.165,
+        "Recall >= 95%": 0.59,
+        "Recall >= 98%": 0.367,
+        "Recall >= 99%": 0.225
+      },
+      "default_f1_threshold": 0.59,
+      "meta_mtime_ns": 1792746026742454899,
+      "p_val_mtime_ns": 1792745943149411581,
+      "y_val_mtime_ns": 1792745943171383412
+    },
+    "rf_dos_smote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.445,
+        "Cost-Sensitive (c=20)": 0.35,
+        "Recall >= 95%": 0.485,
+        "Recall >= 98%": 0.19,
+        "Recall >= 99%": 0.092
+      },
+      "default_f1_threshold": 0.58,
+      "meta_mtime_ns": 1792851784737217354,
+      "p_val_mtime_ns": 1792587473541965754,
+      "y_val_mtime_ns": 1792587473555309397
+    },
+    "rf_exploits_smote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.23,
+        "Cost-Sensitive (c=20)": 0.1,
+        "Recall >= 95%": 0.56,
+        "Recall >= 98%": 0.445,
+        "Recall >= 99%": 0.28
+      },
+      "default_f1_threshold": 0.56,
+      "meta_mtime_ns": 1792852071093841118,
+      "p_val_mtime_ns": 1792599886682427688,
+      "y_val_mtime_ns": 1792599886691673027
+    },
+    "rf_reconnaissance_smote": {
+      "calibrated_thresholds": {
+        "Cost-Sensitive (c=10)": 0.195,
+        "Cost-Sensitive (c=20)": 0.195,
+        "Recall >= 95%": 0.76,
+        "Recall >= 98%": 0.76,
+        "Recall >= 99%": 0.651
+      },
+      "default_f1_threshold": 0.76,
+      "meta_mtime_ns": 1792852439161017742,
+      "p_val_mtime_ns": 1792597735471482112,
+      "y_val_mtime_ns": 1792597735481118743
+    }
+  },
+  "schema_version": 1,
+  "updated_at": "2026-11-20T13:03:14"
+}

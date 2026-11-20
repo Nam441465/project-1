@@ -88,6 +88,67 @@ class MutualInfoScorer:
 
         return mutual_info_classif(X_calc, y_sample, **kwargs)
 
+def compute_mi_scores(
+    X_train: pd.DataFrame,
+    y_train: np.ndarray,
+    random_state: int = 10,
+    max_samples_for_mi: int = 200000,
+):
+    """
+    Tính điểm Mutual Information một lần duy nhất cho tập (X_train, y_train)
+    để tái sử dụng cho nhiều giá trị k khác nhau qua build_selector_from_scores().
+    """
+    is_df = isinstance(X_train, pd.DataFrame)
+    discrete_mask = [col in DISCRETE_FEATURES for col in X_train.columns] if is_df else None
+    feature_names = list(X_train.columns) if is_df else [f"f{i}" for i in range(X_train.shape[1])]
+
+    scorer = MutualInfoScorer(
+        discrete_mask=discrete_mask,
+        random_state=random_state,
+        max_samples_for_mi=max_samples_for_mi,
+    )
+    scores = np.asarray(scorer(X_train, y_train), dtype=float)
+    scores_df = (
+        pd.DataFrame({"Feature": feature_names, "MI_Score": scores})
+        .sort_values(by="MI_Score", ascending=False)
+        .reset_index(drop=True)
+    )
+    return scorer, feature_names, scores, scores_df
+
+
+def build_selector_from_scores(
+    feature_names,
+    scores: np.ndarray,
+    k: int,
+    scorer: MutualInfoScorer | None = None,
+    has_feature_names: bool = True,
+):
+    """Dựng đối tượng SelectKBest đã fit từ vector MI_Score có sẵn (không tính lại MI)."""
+    n_features = len(scores)
+    k_clamped = min(int(k), n_features)
+    feat_arr = np.asarray(feature_names, dtype=object)
+
+    if scorer is None:
+        discrete_mask = [str(col) in DISCRETE_FEATURES for col in feat_arr] if has_feature_names else None
+        scorer = MutualInfoScorer(discrete_mask=discrete_mask)
+
+    selector = SelectKBest(score_func=scorer, k=k_clamped)
+    selector.scores_ = np.asarray(scores, dtype=float).copy()
+    selector.pvalues_ = None
+    selector.n_features_in_ = n_features
+    if has_feature_names:
+        selector.feature_names_in_ = feat_arr
+
+    selected_mask = selector.get_support()
+    selected_features = feat_arr[selected_mask].tolist()
+    scores_df = (
+        pd.DataFrame({"Feature": feat_arr, "MI_Score": selector.scores_})
+        .sort_values(by="MI_Score", ascending=False)
+        .reset_index(drop=True)
+    )
+    return selector, selected_features, scores_df
+
+
 def fit_feature_selector(
     X_train: pd.DataFrame, 
     y_train: np.ndarray, 
@@ -101,29 +162,19 @@ def fit_feature_selector(
     - Có hỗ trợ max_samples_for_mi để tính toán MI siêu nhanh trên tập lớn mà vẫn đảm bảo độ tin cậy.
     - Hỗ trợ discrete_features để xử lý chính xác các biến rời rạc mạng (cổng, giao thức, cờ TCP).
     """
-    total_samples = len(X_train)
-    k = min(k, X_train.shape[1])
-    
-    # Xác định mặt nạ các đặc trưng rời rạc (discrete)
-    discrete_mask = None
-    if isinstance(X_train, pd.DataFrame):
-        discrete_mask = [col in DISCRETE_FEATURES for col in X_train.columns]
-    
-    scorer = MutualInfoScorer(discrete_mask=discrete_mask, random_state=random_state, max_samples_for_mi=max_samples_for_mi)
-    selector = SelectKBest(score_func=scorer, k=k)
-    selector.fit(X_train, y_train)
-    
-    # Lấy danh sách tên đặc trưng được chọn và điểm số tương ứng
-    feature_names = np.array(X_train.columns)
-    selected_mask = selector.get_support()
-    selected_features = feature_names[selected_mask].tolist()
-    
-    scores_df = pd.DataFrame({
-        "Feature": feature_names,
-        "MI_Score": selector.scores_
-    }).sort_values(by="MI_Score", ascending=False).reset_index(drop=True)
-    
-    return selector, selected_features, scores_df
+    scorer, feature_names, scores, _ = compute_mi_scores(
+        X_train,
+        y_train,
+        random_state=random_state,
+        max_samples_for_mi=max_samples_for_mi,
+    )
+    return build_selector_from_scores(
+        feature_names=feature_names,
+        scores=scores,
+        k=k,
+        scorer=scorer,
+        has_feature_names=isinstance(X_train, pd.DataFrame),
+    )
 
 def transform_features(selector: SelectKBest, X: pd.DataFrame) -> pd.DataFrame:
     """Biến đổi ma trận X theo selector đã fit, trả về DataFrame giữ nguyên tên cột."""

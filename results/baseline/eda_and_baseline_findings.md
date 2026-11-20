@@ -1,6 +1,6 @@
 # Báo cáo Tổng hợp Phân tích Dữ liệu (EDA) & Thực nghiệm Cơ sở Random Forest
 
-Dự án Nghiên cứu & Tái lập Hệ thống NIDS trên tập dữ liệu **NF-UNSW-NB15** (1.62M bản ghi)
+Dự án Nghiên cứu & Tái lập Hệ thống NIDS trên tập dữ liệu **NF-UNSW-NB15** (1,623,118 bản ghi)
 *Bài báo tham chiếu: "Random Forest-Based Network Intrusion Detection with Feature Selection and Class Balancing on UNSW-NB15 Traffic" (MDPI Information 2026).*
 
 ---
@@ -42,17 +42,17 @@ Bảng tính điểm Mutual Information (không dùng SMOTE) chỉ ra mỗi lo�
   - `Train Set` (1,104,497 mẫu - **68.05%**)
   - `Validation Set` (155,586 mẫu - **9.59%**)
   - `Held-out Test Set` (363,035 mẫu - **22.37%**)
-- Đường phân phối tích lũy thực nghiệm (Empirical CDF) của các đặc trưng `IN_BYTES`, `OUT_BYTES`, `FLOW_DURATION_MILLISECONDS` trên cả 3 tập trùng khớp 100%, chứng minh **không hề có hiện tượng trôi dữ liệu (Data Drift) hay rò rỉ thông tin (Data Leakage)** giữa các tập đánh giá.
+- Đường phân phối tích lũy thực nghiệm (Empirical CDF) của `IN_BYTES` trên cả 3 tập trùng khớp hoàn toàn, chứng minh **không hề có hiện tượng trôi dữ liệu (Data Drift) hay rò rỉ thông tin (Data Leakage)** giữa các tập đánh giá.
 
 ---
 
 ### Phát hiện 5: "Nghịch lý SMOTE" (SMOTE Paradox) trong Không gian NetFlow
-- **Thực tế thực nghiệm:** Dữ liệu đối chiếu trực tiếp giữa `Without SMOTE` và `With SMOTE (56,000)` khẳng định: **4/5 loại tấn công đạt F1-Score cao hơn khi KHÔNG dùng SMOTE!**
+- **Thực tế thực nghiệm:** Dữ liệu đối chiếu trực tiếp giữa `Without SMOTE` và `With SMOTE (56,000)` khẳng định: **5/5 loại tấn công đạt F1-Score cao hơn khi KHÔNG dùng SMOTE!**
   - `Backdoor`: F1 không SMOTE = **0.9535** vs có SMOTE = **0.9486** (FP tăng từ 18 lên 21).
-  - `Analysis`: F1 không SMOTE = **0.8733** vs có SMOTE = **0.8724** (FP tăng gấp 3 lần từ 3 lên 9!).
+  - `Analysis`: F1 không SMOTE = **0.8733** vs có SMOTE = **0.8724** (FP tăng từ 3 lên 9).
   - `Reconnaissance`: F1 không SMOTE = **0.9673** vs có SMOTE = **0.9642** (FN tăng từ 30 lên 54).
   - `Exploits`: F1 không SMOTE = **0.9470** vs có SMOTE = **0.9450** (FP tăng từ 413 lên 452).
-  - `DoS`: SMOTE giúp tăng nhẹ Recall (0.9097 $\rightarrow$ 0.9177, FN giảm 102 $\rightarrow$ 93), nhưng làm F1 giảm (0.8650 $\rightarrow$ 0.8503) do FP tăng mạnh từ 219 lên 272.
+  - `DoS`: SMOTE giúp tăng nhẹ Recall (0.9097 $\rightarrow$ 0.9177, FN giảm 102 $\rightarrow$ 93), nhưng làm F1 giảm (0.8650 $\rightarrow$ 0.8503) do FP tăng từ 219 lên 272.
 - **Bản chất khoa học:** Kỹ thuật nội suy lân cận $k$-NN của SMOTE hoạt động kém trên không gian đặc trưng mạng chứa nhiều biến rời rạc (`discrete`) và phân cụm hẹp. SMOTE vô tình sinh ra các điểm dữ liệu nhân tạo nằm xâm lấn vào vùng ranh giới quyết định của `Benign`, dẫn đến **sự bùng nổ cảnh báo giả (False Positive Alarm Explosion)**.
 
 ---
@@ -60,11 +60,11 @@ Bảng tính điểm Mutual Information (không dùng SMOTE) chỉ ra mỗi lo�
 ### Phát hiện 6: Bài toán Đánh đổi Sinh tử trong Vận hành SOC (Table 8 Replication)
 - Trong Trung tâm Điều hành An ninh Mạng (SOC), cảnh báo giả (FP) làm quá tải chuyên viên ("alert fatigue"), nhưng cảnh báo bỏ sót (FN) lại trực tiếp dẫn tới thảm họa an ninh khi mã độc xâm nhập trót lọt.
 - Phân tích Table 8 trực quan hóa chỉ rõ:
-  1. Với `Analysis`: Mô hình không SMOTE có độ chính xác cực cao (**99.15% Precision**, chỉ 3 ca báo nhầm trên 346k mẫu Benign), nhưng lại **bỏ sót tới 98 cuộc tấn công** (Recall chỉ đạt 78.03%).
-  2. Với `DoS`: Muốn giảm 9 ca bỏ sót (từ 102 xuống 93), hệ thống phải trả giá bằng **53 ca báo giả tăng thêm** (219 lên 272).
-  3. Với `Backdoor`: Cả hai cấu hình đều đạt khả năng phát hiện vượt trội (>95% TP), nhưng Không SMOTE vẫn giữ mức cảnh báo giả thấp nhất (18 FP).
+  1. Với `Analysis`: Mô hình không SMOTE có độ chính xác cực cao (**99.15% Precision**, chỉ 3 ca báo nhầm trên 346,841 mẫu Benign), nhưng lại **bỏ sót tới 98 cuộc tấn công** (Recall đạt 78.03%).
+  2. Với `DoS`: Muốn giảm 9 ca bỏ sót (từ 102 xuống 93), hệ thống SMOTE phải trả giá bằng **53 ca báo giả tăng thêm** (219 lên 272).
+  3. Với `Backdoor`: Cả hai cấu hình đều đạt khả năng phát hiện cao (>94% Recall), nhưng Không SMOTE giữ mức cảnh báo giả thấp nhất (18 FP).
 - **Kết luận định hướng Giai đoạn 2:** Không thể giải quyết bài toán bỏ sót FN bằng việc lạm dụng SMOTE. Cần chuyển hướng sang:
-  1. Mô hình Gradient Boosting (`HistGradientBoosting` / `XGBoost` / `LightGBM`) với khả năng học ranh giới phi tuyến tốt hơn.
+  1. Mô hình Gradient Boosting (`HistGradientBoosting`) với khả năng học ranh giới phi tuyến tốt và tốc độ vượt trội.
   2. Kỹ thuật **Dò ngưỡng theo Recall mục tiêu** ($R \ge 0.95, 0.98, 0.99$).
   3. **Mô hình nhạy chi phí (Cost-Sensitive Learning)** gán trọng số thiệt hại $c \times FN$ cao hơn $FP$.
 

@@ -1,0 +1,79 @@
+Model_Family,Operating_Point,Traffic_Class,Class_Group,Total_Flows,Any5_Flagged_Flows,Any5_Flag_Rate_Pct,Matched_Specialist_Flows,Matched_Specialist_Rate_Pct,Multi_Specialist_Overlap_Flows,Inference_Time_Sec_363k
+RF,F1-Optimal,Benign,Benign,346841,564,0.16,0,0.0,205,15.16
+RF,F1-Optimal,DoS,Target_5,1130,1078,95.4,1028,90.97,932,15.16
+RF,F1-Optimal,Exploits,Target_5,5533,5360,96.87,5347,96.64,3187,15.16
+RF,F1-Optimal,Backdoor,Target_5,398,394,98.99,379,95.23,365,15.16
+RF,F1-Optimal,Analysis,Target_5,446,362,81.17,349,78.25,353,15.16
+RF,F1-Optimal,Reconnaissance,Target_5,2749,2744,99.82,2719,98.91,824,15.16
+RF,F1-Optimal,Fuzzers,Unseen_4,4353,513,11.78,0,0.0,443,15.16
+RF,F1-Optimal,Generic,Unseen_4,1246,1050,84.27,0,0.0,660,15.16
+RF,F1-Optimal,Shellcode,Unseen_4,305,157,51.48,0,0.0,79,15.16
+RF,F1-Optimal,Worms,Unseen_4,34,34,100.0,0,0.0,21,15.16
+RF,F1-Optimal,TARGET_5_TOTAL,Aggregate,10256,9938,96.9,9822,95.77,5661,15.16
+RF,F1-Optimal,UNSEEN_4_TOTAL,Aggregate,5938,1754,29.54,0,0.0,1203,15.16
+RF,F1-Optimal,ALL_ATTACKS_TOTAL,Aggregate,16194,11692,72.2,9822,60.65,6864,15.16
+RF,Cost-Opt c=10,Benign,Benign,346841,1402,0.4,0,0.0,638,15.16
+RF,Cost-Opt c=10,DoS,Target_5,1130,1125,99.56,1096,96.99,1094,15.16
+RF,Cost-Opt c=10,Exploits,Target_5,5533,5520,99.77,5479,99.02,4494,15.16
+RF,Cost-Opt c=10,Backdoor,Target_5,398,398,100.0,386,96.98,388,15.16
+RF,Cost-Opt c=10,Analysis,Target_5,446,440,98.65,433,97.09,395,15.16
+RF,Cost-Opt c=10,Reconnaissance,Target_5,2749,2749,100.0,2734,99.45,879,15.16
+RF,Cost-Opt c=10,Fuzzers,Unseen_4,4353,742,17.05,0,0.0,551,15.16
+RF,Cost-Opt c=10,Generic,Unseen_4,1246,1133,90.93,0,0.0,988,15.16
+RF,Cost-Opt c=10,Shellcode,Unseen_4,305,233,76.39,0,0.0,149,15.16
+RF,Cost-Opt c=10,Worms,Unseen_4,34,34,100.0,0,0.0,31,15.16
+RF,Cost-Opt c=10,TARGET_5_TOTAL,Aggregate,10256,10232,99.77,10128,98.75,7250,15.16
+RF,Cost-Opt c=10,UNSEEN_4_TOTAL,Aggregate,5938,2142,36.07,0,0.0,1719,15.16
+RF,Cost-Opt c=10,ALL_ATTACKS_TOTAL,Aggregate,16194,12374,76.41,10128,62.54,8969,15.16
+GB,F1-Optimal,Benign,Benign,346841,618,0.18,0,0.0,285,10.73
+GB,F1-Optimal,DoS,Target_5,1130,1062,93.98,1000,88.5,920,10.73
+GB,F1-Optimal,Exploits,Target_5,5533,5278,95.39,5229,94.51,3843,10.73
+GB,F1-Optimal,Backdoor,Target_5,398,384,96.48,359,90.2,366,10.73
+GB,F1-Optimal,Analysis,Target_5,446,365,81.84,345,77.35,350,10.73
+GB,F1-Optimal,Reconnaissance,Target_5,2749,2739,99.64,2717,98.84,818,10.73
+GB,F1-Optimal,Fuzzers,Unseen_4,4353,582,13.37,0,0.0,488,10.73
+GB,F1-Optimal,Generic,Unseen_4,1246,1086,87.16,0,0.0,843,10.73
+GB,F1-Optimal,Shellcode,Unseen_4,305,147,48.2,0,0.0,87,10.73
+GB,F1-Optimal,Worms,Unseen_4,34,33,97.06,0,0.0,30,10.73
+GB,F1-Optimal,TARGET_5_TOTAL,Aggregate,10256,9828,95.83,9650,94.09,6297,10.73
+GB,F1-Optimal,UNSEEN_4_TOTAL,Aggregate,5938,1848,31.12,0,0.0,1448,10.73
+GB,F1-Optimal,ALL_ATTACKS_TOTAL,Aggregate,16194,11676,72.1,9650,59.59,7745,10.73
+GB,Cost-Opt c=10,Benign,Benign,346841,1430,0.41,0,0.0,775,10.73
+GB,Cost-Opt c=10,DoS,Target_5,1130,1123,99.38,1098,97.17,1068,10.73
+GB,Cost-Opt c=10,Exploits,Target_5,5533,5502,99.44,5476,98.97,4703,10.73
+GB,Cost-Opt c=10,Backdoor,Target_5,398,397,99.75,389,97.74,388,10.73
+GB,Cost-Opt c=10,Analysis,Target_5,446,440,98.65,419,93.95,399,10.73
+GB,Cost-Opt c=10,Reconnaissance,Target_5,2749,2748,99.96,2738,99.6,854,10.73
+GB,Cost-Opt c=10,Fuzzers,Unseen_4,4353,706,16.22,0,0.0,585,10.73
+GB,Cost-Opt c=10,Generic,Unseen_4,1246,1123,90.13,0,0.0,1010,10.73
+GB,Cost-Opt c=10,Shellcode,Unseen_4,305,231,75.74,0,0.0,143,10.73
+GB,Cost-Opt c=10,Worms,Unseen_4,34,34,100.0,0,0.0,32,10.73
+GB,Cost-Opt c=10,TARGET_5_TOTAL,Aggregate,10256,10210,99.55,10120,98.67,7412,10.73
+GB,Cost-Opt c=10,UNSEEN_4_TOTAL,Aggregate,5938,2094,35.26,0,0.0,1770,10.73
+GB,Cost-Opt c=10,ALL_ATTACKS_TOTAL,Aggregate,16194,12304,75.98,10120,62.49,9182,10.73
+PaperRF,F1-Optimal,Benign,Benign,346841,544,0.16,0,0.0,202,11.33
+PaperRF,F1-Optimal,DoS,Target_5,1130,1083,95.84,1036,91.68,939,11.33
+PaperRF,F1-Optimal,Exploits,Target_5,5533,5358,96.84,5347,96.64,3245,11.33
+PaperRF,F1-Optimal,Backdoor,Target_5,398,384,96.48,374,93.97,362,11.33
+PaperRF,F1-Optimal,Analysis,Target_5,446,355,79.6,351,78.7,354,11.33
+PaperRF,F1-Optimal,Reconnaissance,Target_5,2749,2737,99.56,2714,98.73,827,11.33
+PaperRF,F1-Optimal,Fuzzers,Unseen_4,4353,501,11.51,0,0.0,426,11.33
+PaperRF,F1-Optimal,Generic,Unseen_4,1246,1029,82.58,0,0.0,715,11.33
+PaperRF,F1-Optimal,Shellcode,Unseen_4,305,151,49.51,0,0.0,70,11.33
+PaperRF,F1-Optimal,Worms,Unseen_4,34,34,100.0,0,0.0,20,11.33
+PaperRF,F1-Optimal,TARGET_5_TOTAL,Aggregate,10256,9917,96.69,9822,95.77,5727,11.33
+PaperRF,F1-Optimal,UNSEEN_4_TOTAL,Aggregate,5938,1715,28.88,0,0.0,1231,11.33
+PaperRF,F1-Optimal,ALL_ATTACKS_TOTAL,Aggregate,16194,11632,71.83,9822,60.65,6958,11.33
+PaperRF,Cost-Opt c=10,Benign,Benign,346841,1216,0.35,0,0.0,520,11.33
+PaperRF,Cost-Opt c=10,DoS,Target_5,1130,1124,99.47,1099,97.26,1090,11.33
+PaperRF,Cost-Opt c=10,Exploits,Target_5,5533,5499,99.39,5479,99.02,4590,11.33
+PaperRF,Cost-Opt c=10,Backdoor,Target_5,398,396,99.5,382,95.98,388,11.33
+PaperRF,Cost-Opt c=10,Analysis,Target_5,446,431,96.64,408,91.48,387,11.33
+PaperRF,Cost-Opt c=10,Reconnaissance,Target_5,2749,2748,99.96,2734,99.45,879,11.33
+PaperRF,Cost-Opt c=10,Fuzzers,Unseen_4,4353,746,17.14,0,0.0,578,11.33
+PaperRF,Cost-Opt c=10,Generic,Unseen_4,1246,1130,90.69,0,0.0,991,11.33
+PaperRF,Cost-Opt c=10,Shellcode,Unseen_4,305,240,78.69,0,0.0,150,11.33
+PaperRF,Cost-Opt c=10,Worms,Unseen_4,34,34,100.0,0,0.0,33,11.33
+PaperRF,Cost-Opt c=10,TARGET_5_TOTAL,Aggregate,10256,10198,99.43,10102,98.5,7334,11.33
+PaperRF,Cost-Opt c=10,UNSEEN_4_TOTAL,Aggregate,5938,2150,36.21,0,0.0,1752,11.33
+PaperRF,Cost-Opt c=10,ALL_ATTACKS_TOTAL,Aggregate,16194,12348,76.25,10102,62.38,9086,11.33

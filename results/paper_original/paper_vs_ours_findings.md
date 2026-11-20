@@ -35,6 +35,8 @@
 
 > **Nhận xét Tái lập Paper-Exact:** Ngay trên chính pipeline nguyên bản 100% của Pospíchal et al. khi áp dụng lên luồng `NF-UNSW-NB15`, cấu hình **Without SMOTE giành chiến thắng trên 4/5 loại tấn công** về chỉ số Test $F_1$, đồng thời tổng thời gian chạy chỉ riêng bước tìm kiếm siêu tham số `RandomizedSearchCV` qua 4 mốc $k$ tiêu tốn tới **1386.6 phút** (cộng thêm **76.1 phút** huấn luyện mô hình cuối).
 
+> **Lưu ý kỹ thuật về trôi dấu chấm động `np.arange` trên `DoS`:** Phiên bản gốc `train_paper_rf.py` dùng `np.arange(0.05, 0.95, 0.01)` nên tại bước 37 sinh giá trị IEEE-754 `0.42000000000000004` (cho `FN=96`, `FP=184` được ghi trong CSV), trong khi đọc lại ngưỡng làm tròn `0.42` (`>= 0.42`) cho `FN=94`, `FP=186`.
+
 ---
 
 ## 3. Đối Sánh Trực Tiếp 3 Hệ Thống (Điều Kiện Chuẩn Without SMOTE)
@@ -74,15 +76,20 @@
 
 ### 4.4. Phát hiện 4: Giới hạn của Dải ngưỡng `0.05..0.94` Tối ưu Thuần $F_1$ vs Tối ưu Chi phí Vận hành SOC ($c=10$)
 
-- Bài báo gốc giới hạn dải quét ngưỡng ở `[0.05, 0.94]` và chỉ tối ưu điểm $F_1$ đối xứng (coi trọng số lỗi bỏ sót tấn công `FN` ngang bằng với báo nhầm `FP`). Trong môi trường SOC thực chiến ($c=10$: 1 cuộc tấn công lọt lưới gây thiệt hại gấp 10 lần 1 cảnh báo giả), hệ thống nhạy chi phí của chúng ta cắt giảm sâu cả số cuộc tấn công lọt lưới lẫn tổng chi phí rủi ro:
+- Bài báo gốc giới hạn dải quét ngưỡng ở `[0.05, 0.94]` và chỉ tối ưu điểm $F_1$ đối xứng (coi trọng số lỗi bỏ sót tấn công `FN` ngang bằng với báo nhầm `FP`). Để tách bạch **lợi ích do đổi hàm mục tiêu chỉnh ngưỡng** khỏi **lợi ích do cải tiến pipeline/mô hình**, bảng dưới đây bổ sung thêm đối chứng **Paper-Exact RF (Cost-Opt $c=10$)** sử dụng chính vector xác suất của mô hình bài báo gốc trên lưới `0.005..0.995`:
 
-| Loại Tấn công | Paper-Exact RF (`FN` / `FP` / `Cost c=10`) | Ours RF Cost-Opt $c=10$ (`FN` / `FP` / `Cost c=10`) | Ours HistGB Cost-Opt $c=10$ (`FN` / `FP` / `Cost c=10`) | **Số Tấn công Cứu thêm (Ours RF vs Paper)** | **Tiết kiệm Chi phí SOC (Ours RF vs Paper)** |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **DoS** | 96 / 184 / **1,144** | **34** / 427 / **767** | 32 / 665 / 985 | **Cứu thêm +62 cuộc tấn công** | **+32.95%** |
-| **Exploits** | 186 / 413 / **2,273** | **54** / 903 / **1,443** | 57 / 975 / 1,545 | **Cứu thêm +132 cuộc tấn công** | **+36.52%** |
-| **Backdoor** | 24 / 25 / **265** | **12** / 54 / **174** | 9 / 74 / 164 | **Cứu thêm +12 cuộc tấn công** | **+34.34%** |
-| **Analysis** | 95 / 2 / **952** | **14** / 715 / **855** | 27 / 603 / 873 | **Cứu thêm +81 cuộc tấn công** | **+10.19%** |
-| **Reconnaissance** | 35 / 148 / **498** | **15** / 189 / **339** | 11 / 254 / 364 | **Cứu thêm +20 cuộc tấn công** | **+31.93%** |
+| Loại Tấn công | Paper-Exact RF F1-Opt (`t`, `FN`/`FP`/`Cost`) | Paper-Exact RF Cost-Opt $c=10$ (`t*`, `FN`/`FP`/`Cost`) | Ours RF Cost-Opt $c=10$ (`t*`, `FN`/`FP`/`Cost`) | Ours HistGB Cost-Opt $c=10$ (`t*`, `FN`/`FP`/`Cost`) | **Cứu FN: Đổi ngưỡng / Đổi Pipeline (Ours RF)** | **Tiết kiệm Chi phí (Ours RF vs Paper F1 / vs Paper c=10)** |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **DoS** | `0.42`: 96 / 184 / **1,144** | `0.155`: 31 / 419 / **729** | `0.485`: **34** / 427 / **767** | `0.840`: 32 / 665 / 985 | +65 / -3 | **+32.95%** / -5.21% |
+| **Exploits** | `0.46`: 186 / 413 / **2,273** | `0.125`: 54 / 903 / **1,443** | `0.125`: **54** / 903 / **1,443** | `0.535`: 57 / 975 / 1,545 | +132 / +0 | **+36.52%** / +0.00% |
+| **Backdoor** | `0.28`: 24 / 25 / **265** | `0.155`: 16 / 65 / **225** | `0.145`: **12** / 54 / **174** | `0.235`: 9 / 74 / 164 | +8 / +4 | **+34.34%** / +22.67% |
+| **Analysis** | `0.67`: 95 / 2 / **952** | `0.090`: 38 / 318 / **698** | `0.035`: **14** / 715 / **855** | `0.340`: 27 / 603 / 873 | +57 / +24 | **+10.19%** / -22.49% |
+| **Reconnaissance** | `0.48`: 35 / 148 / **498** | `0.235`: 15 / 187 / **337** | `0.225`: **15** / 189 / **339** | `0.220`: 11 / 254 / 364 | +20 / +0 | **+31.93%** / -0.59% |
+
+> **Tổng kết Ablation trên cả 5 tấn công ($c=10$):**
+> - **1. Lợi ích thuần từ chỉnh ngưỡng (`Paper-Exact RF F1-Opt` $\rightarrow$ `Paper-Exact RF c=10`):** Tổng `FN` giảm từ **436 $\rightarrow$ 154** (cứu thêm **282** cuộc tấn công), tổng chi phí SOC giảm từ **5,132 $\rightarrow$ 3,432** (**-33.13%**).
+> - **2. Lợi ích từ cải tiến Pipeline/Mô hình (cùng chế độ `c=10`):** Tổng `FN` tiếp tục giảm từ **154 $\rightarrow$ 129** trên `Ours RF` (tổng chi phí **3,578**) và **154 $\rightarrow$ 136** trên `Ours HistGB` (tổng chi phí **3,931** với tốc độ search+fit nhanh hơn hàng chục lần).
+
 
 ---
 
