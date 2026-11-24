@@ -97,10 +97,9 @@ with st.sidebar:
     family_short = {
         "PAPER": "Paper-Exact RF",
         "RF": "Ours-RF",
-        "GB": "Ours-HistGB",
     }
-    ordered_fams = [f for f in ["PAPER", "RF", "GB"] if f in family_counts] + sorted(
-        f for f in family_counts if f not in {"PAPER", "RF", "GB"}
+    ordered_fams = [f for f in ["PAPER", "RF"] if f in family_counts] + sorted(
+        f for f in family_counts if f not in {"PAPER", "RF"}
     )
     if num_models > 0:
         breakdown = " • ".join(f"{family_counts[f]} {family_short.get(f, f)}" for f in ordered_fams)
@@ -166,7 +165,7 @@ with st.sidebar:
     st.markdown("---")
     with st.expander("Phương pháp phân luồng 2 tầng", expanded=False):
         st.markdown(
-            "- **Tầng 1 (Inline Classifier):** Phân loại lưu lượng NetFlow bằng HistGB hoặc Random Forest.\n"
+            "- **Tầng 1 (Inline Classifier):** Phân loại lưu lượng NetFlow bằng Random Forest (`Paper-Exact RF` / `Ours Improved RF`).\n"
             "- **Vùng cận ngưỡng (Near-Miss):** Khoảng `[min(0.10, 0.5 × t), t)` chuyển sang **Tầng 2** kiểm tra quy tắc đặc trưng sâu nhằm giảm bỏ sót mà không tăng mạnh cảnh báo nhầm."
         )
 

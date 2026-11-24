@@ -47,7 +47,7 @@ NETFLOW_FEATURES: List[str] = [
 ]
 
 CANONICAL_ATTACKS: List[str] = ["DoS", "Exploits", "Backdoor", "Analysis", "Reconnaissance"]
-FAMILY_DISPLAY_ORDER: List[str] = ["PAPER", "RF", "GB"]
+FAMILY_DISPLAY_ORDER: List[str] = ["PAPER", "RF"]
 
 RISK_ZONE_ATTACK = "ATTACK (Chặn ngay - Tầng 1)"
 RISK_ZONE_SUSPICIOUS = "SUSPICIOUS / NEAR-MISS (Chuyển DPI Tầng 2)"
@@ -144,8 +144,8 @@ def get_near_miss_bounds(thresh: float) -> Tuple[float, float]:
 
 def build_consensus_matrix(details_df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
     """
-    Tổng hợp bảng chi tiết đa mô hình thành ma trận đồng thuận 5×3
-    (5 loại tấn công × PAPER / RF / GB) theo từng điều kiện huấn luyện.
+    Tổng hợp bảng chi tiết đa mô hình thành ma trận đồng thuận 5×2
+    (5 loại tấn công × PAPER / RF) theo từng điều kiện huấn luyện.
     """
     if details_df is None or details_df.empty:
         return {}
@@ -167,7 +167,7 @@ def build_consensus_matrix(details_df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
 
             for fam in FAMILY_DISPLAY_ORDER:
                 fam_df = att_df[att_df["Model_Family"].str.upper() == fam]
-                col_prefix = "Ours-HistGB" if fam == "GB" else ("Ours-RF" if fam == "RF" else "PAPER")
+                col_prefix = "Ours-RF" if fam == "RF" else "PAPER"
                 if fam_df.empty:
                     row[col_prefix] = "N/A"
                     row[f"{col_prefix}_Status"] = "N/A"
@@ -429,8 +429,6 @@ class NIDSInferenceEngine:
 
                     if prefix.startswith("rf_"):
                         model_family = "RF"
-                    elif prefix.startswith("gb_"):
-                        model_family = "GB"
                     else:
                         parts = prefix.split("_")
                         model_family = parts[0].upper()
@@ -591,7 +589,7 @@ class NIDSInferenceEngine:
     def get_available_model_families(self) -> List[str]:
         """Trả về danh sách các họ mô hình hiện có trong registry theo thứ tự ưu tiên."""
         families = {info["model_family"] for info in self.models_registry.values()}
-        preferred = ["GB", "RF", "PAPER"]
+        preferred = ["RF", "PAPER"]
         ordered = [f for f in preferred if f in families]
         extras = sorted(f for f in families if f not in preferred)
         return ordered + extras
@@ -1156,51 +1154,19 @@ class NIDSInferenceEngine:
         elif sample_type == "attack_stealth_nearmiss":
             cost_thresh = self.models_registry[rf_key]["thresholds"].get("Cost-Sensitive (c=10)", 0.40)
 
-            gb_key = f"gb_{attack_name.lower()}_nosmote"
-            if gb_key in self.models_registry:
-                gb_model = self.get_model(gb_key)
-                gb_feats = self.models_registry[gb_key]["selected_features"]
-                gb_f1_th = self.models_registry[gb_key]["default_f1_threshold"]
-                X_gb, _ = self._coerce_numeric_features(sample_candidates, gb_feats)
-                sample_candidates["prob_gb"] = gb_model.predict_proba(
-                    self._format_model_input(gb_model, X_gb)
-                )[:, 1]
-
-                both_near_miss = sample_candidates[
-                    (sample_candidates["prob"] >= cost_thresh)
-                    & (sample_candidates["prob"] < f1_opt_thresh)
-                    & (sample_candidates["prob_gb"] < gb_f1_th)
-                ]
-                if not both_near_miss.empty:
-                    chosen = both_near_miss.loc[rng.choice(both_near_miss.index)]
-                else:
-                    ideal_near_miss = sample_candidates[
-                        (sample_candidates["prob"] >= cost_thresh) & (sample_candidates["prob"] < f1_opt_thresh)
-                    ]
-                    if not ideal_near_miss.empty:
-                        chosen = ideal_near_miss.loc[rng.choice(ideal_near_miss.index)]
-                    else:
-                        below_thresh = sample_candidates[sample_candidates["prob"] < f1_opt_thresh]
-                        if not below_thresh.empty:
-                            top_below = below_thresh.sort_values(by="prob", ascending=False).head(10)
-                            chosen = top_below.loc[rng.choice(top_below.index)]
-                        else:
-                            low_cand = sample_candidates.sort_values(by="prob", ascending=True).head(10)
-                            chosen = low_cand.loc[rng.choice(low_cand.index)]
+            ideal_near_miss = sample_candidates[
+                (sample_candidates["prob"] >= cost_thresh) & (sample_candidates["prob"] < f1_opt_thresh)
+            ]
+            if not ideal_near_miss.empty:
+                chosen = ideal_near_miss.loc[rng.choice(ideal_near_miss.index)]
             else:
-                ideal_near_miss = sample_candidates[
-                    (sample_candidates["prob"] >= cost_thresh) & (sample_candidates["prob"] < f1_opt_thresh)
-                ]
-                if not ideal_near_miss.empty:
-                    chosen = ideal_near_miss.loc[rng.choice(ideal_near_miss.index)]
+                below_thresh = sample_candidates[sample_candidates["prob"] < f1_opt_thresh]
+                if not below_thresh.empty:
+                    top_below = below_thresh.sort_values(by="prob", ascending=False).head(10)
+                    chosen = top_below.loc[rng.choice(top_below.index)]
                 else:
-                    below_thresh = sample_candidates[sample_candidates["prob"] < f1_opt_thresh]
-                    if not below_thresh.empty:
-                        top_below = below_thresh.sort_values(by="prob", ascending=False).head(10)
-                        chosen = top_below.loc[rng.choice(top_below.index)]
-                    else:
-                        low_cand = sample_candidates.sort_values(by="prob", ascending=True).head(10)
-                        chosen = low_cand.loc[rng.choice(low_cand.index)]
+                    low_cand = sample_candidates.sort_values(by="prob", ascending=True).head(10)
+                    chosen = low_cand.loc[rng.choice(low_cand.index)]
 
             flow_dict = chosen[NETFLOW_FEATURES].to_dict()
             flow_dict["True_Attack"] = str(chosen["Attack"])

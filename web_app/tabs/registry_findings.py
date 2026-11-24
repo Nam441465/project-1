@@ -22,16 +22,14 @@ FIGURES_DICT: Dict[str, str] = {
     "fig06_rf_smote_vs_nosmote_comparison.png": "Hình 6: So sánh hiệu năng Random Forest Without SMOTE vs With SMOTE",
     "fig07_rf_k_sensitivity.png": "Hình 7: Phân tích độ nhạy của số đặc trưng k đối với F1-Score (RF)",
     "fig08_rf_confusion_matrices_table8.png": "Hình 8: Ma trận nhầm lẫn 5 bài toán RF Baseline (Table 8 MDPI)",
-    "fig09_rf_vs_gb_comparison.png": "Hình 9: Đối sánh Random Forest và HistGradientBoosting",
-    "fig10_precision_recall_curves_rf_vs_gb.png": "Hình 10: Đường cong Precision-Recall (RF vs GB trên 5 bài toán)",
     "fig11_recall_threshold_tradeoff.png": "Hình 11: Tối ưu hóa ngưỡng theo Recall mục tiêu (95%, 98%, 99%)",
     "fig12_cost_sensitive_analysis.png": "Hình 12: Phân tích chi phí bất đối xứng Cost-Sensitive (c=1, 5, 10, 20)",
     "fig13_false_negative_forensics.png": "Hình 13: Phân tích đặc trưng các mẫu bị bỏ sót (False Negative Forensics)",
-    "fig14_calibration_and_bootstrap.png": "Hình 14: Hiệu chuẩn Bayes HistGB (ECE-15) & Bootstrap 95% CI / McNemar",
+    "fig14_calibration_and_bootstrap.png": "Hình 14: Hiệu chuẩn xác suất (ECE-15) & Bootstrap 95% CI / McNemar (PaperRF vs Ours RF)",
     "fig15_mixed_flow_orchestration.png": "Hình 15: Đánh giá điều phối hỗn hợp Any-of-5 (Benign FPR, Target-5 & Unseen-4)",
-    "fig_p01_three_systems_f1_and_speed.png": "Hình P01: Đối sánh F1 và tốc độ huấn luyện của 3 hệ thống (Paper-Exact vs Ours RF vs Ours GB)",
+    "fig_p01_two_systems_f1_and_speed.png": "Hình P01: Đối sánh F1 và tốc độ huấn luyện của 2 hệ thống RF (Paper-Exact vs Ours RF)",
     "fig_p02_smote_paradox_and_leakage_ablation.png": "Hình P02: Tác động của SMOTE và thực nghiệm chống rò rỉ kiểm định chéo (CV Leakage)",
-    "fig_p03_pr_curves_three_systems.png": "Hình P03: Đường cong Precision-Recall của 3 hệ thống trên 5 lớp tấn công",
+    "fig_p03_pr_curves_two_systems.png": "Hình P03: Đường cong Precision-Recall của 2 hệ thống RF trên 5 lớp tấn công",
     "fig_p04_soc_cost_and_fn_comparison.png": "Hình P04: Đối sánh chi phí rủi ro SOC (c=10) và số luồng tấn công bị bỏ sót (FN)",
 }
 
@@ -107,7 +105,7 @@ def render_registry_findings_tab(
                     st.json(info["thresholds"])
 
     with sub_t2:
-        st.markdown("**Thư viện 19 biểu đồ thực nghiệm (300 DPI)**")
+        st.markdown("**Thư viện 17 biểu đồ thực nghiệm (300 DPI)**")
 
         fig_choice = st.selectbox(
             "Chọn biểu đồ cần xem:",
@@ -130,10 +128,10 @@ def render_registry_findings_tab(
         rep_choice = st.radio(
             "Chọn báo cáo:",
             [
-                "Đối sánh 3 hệ thống: Paper-Exact vs Ours RF vs Ours GB (paper_vs_ours_findings.md)",
+                "Đối sánh 2 hệ thống RF: Paper-Exact RF vs Ours Improved RF (paper_vs_ours_findings.md)",
                 "Phân tích khám phá dữ liệu & Baseline (eda_and_baseline_findings.md)",
                 "Phân tích bỏ sót FN & Tối ưu chi phí SOC (fn_and_cost_findings.md)",
-                "Chẩn đoán khoa học Package A: Bayes Calib, Bootstrap & Any-of-5 (scientific_diagnostics_findings.md)",
+                "Chẩn đoán khoa học Package A: Calibration, Bootstrap & Any-of-5 (scientific_diagnostics_findings.md)",
             ],
             key="rad_report_choice",
         )

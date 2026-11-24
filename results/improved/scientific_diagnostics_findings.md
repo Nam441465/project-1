@@ -1,97 +1,60 @@
-# Scientific Diagnostics Report (Zero-Model Analytical & Full Held-Out Evaluation)
+# Scientific Diagnostics Report (Random Forest-Only Analytical & Full Held-Out Evaluation)
 
-All metrics below were computed strictly from existing `.npy`, `.joblib`, `.json`, `.csv` artifacts and `data/processed/{train,heldout_test}.parquet` without fitting or modifying any model.
+All metrics below were computed strictly from existing `.npy`, `.joblib`, `.json`, `.csv` artifacts and `data/processed/heldout_test.parquet` without fitting or modifying any model.
 
-## 1. Probability Calibration & Analytical Bayes Prior-Odds Correction
+## 1. Probability Calibration Diagnostics (`PaperRF` vs `Ours Improved RF`)
 
-| Attack | Model | Prior Shift | Brier | LogLoss | ECE-15 | `t*_F1` | Test F1 | `t*_c10` | Cost `c=10` | ECE Reduction vs Raw GB |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| DoS | RF | 1.0000x | 0.000989 | 0.003666 | 0.001611 | 0.760 | 0.8650 | 0.485 | 767 | 0.00% |
-| DoS | GB | 1.0000x | 0.002297 | 0.010938 | 0.002876 | 0.990 | 0.8200 | 0.840 | 985 | 0.00% |
-| DoS | PaperRF | 1.0000x | 0.000590 | 0.002447 | 0.000241 | 0.420 | 0.8810 | 0.155 | 729 | 91.60% |
-| DoS | GB_BayesPrior | 7.0348x | 0.001535 | 0.006500 | 0.001730 | 0.955 | 0.8188 | 0.435 | 992 | 39.84% |
-| DoS | GB_BayesFullPrior | 307.0195x | 0.000941 | 0.003420 | 0.000598 | 0.320 | 0.8188 | 0.015 | 979 | 79.19% |
-| Exploits | RF | 1.0000x | 0.001443 | 0.005596 | 0.000626 | 0.460 | 0.9470 | 0.125 | 1,443 | 0.00% |
-| Exploits | GB | 1.0000x | 0.002302 | 0.009010 | 0.002877 | 0.870 | 0.9328 | 0.535 | 1,545 | 0.00% |
-| Exploits | PaperRF | 1.0000x | 0.001443 | 0.005596 | 0.000626 | 0.460 | 0.9470 | 0.125 | 1,443 | 78.24% |
-| Exploits | GB_BayesPrior | 7.0348x | 0.001711 | 0.006252 | 0.000634 | 0.475 | 0.9329 | 0.140 | 1,545 | 77.97% |
-| Exploits | GB_BayesFullPrior | 7.0348x | 0.001711 | 0.006252 | 0.000634 | 0.475 | 0.9329 | 0.140 | 1,545 | 77.97% |
-| Backdoor | RF | 1.0000x | 0.000084 | 0.000505 | 0.000046 | 0.300 | 0.9535 | 0.145 | 174 | 0.00% |
-| Backdoor | GB | 1.0000x | 0.000151 | 0.000625 | 0.000180 | 0.990 | 0.9386 | 0.235 | 164 | 0.00% |
-| Backdoor | PaperRF | 1.0000x | 0.000095 | 0.000434 | 0.000048 | 0.280 | 0.9385 | 0.155 | 225 | 73.53% |
-| Backdoor | GB_BayesPrior | 7.0348x | 0.000106 | 0.000460 | 0.000074 | 0.910 | 0.9399 | 0.040 | 166 | 58.88% |
-| Backdoor | GB_BayesFullPrior | 7.0348x | 0.000106 | 0.000460 | 0.000074 | 0.910 | 0.9399 | 0.040 | 166 | 58.88% |
-| Analysis | RF | 1.0000x | 0.000266 | 0.001522 | 0.000103 | 0.550 | 0.8733 | 0.035 | 855 | 0.00% |
-| Analysis | GB | 1.0000x | 0.000573 | 0.001800 | 0.000940 | 0.990 | 0.8690 | 0.340 | 873 | 0.00% |
-| Analysis | PaperRF | 1.0000x | 0.000254 | 0.001105 | 0.000131 | 0.670 | 0.8786 | 0.090 | 698 | 86.11% |
-| Analysis | GB_BayesPrior | 7.0348x | 0.000272 | 0.001045 | 0.000035 | 0.915 | 0.8690 | 0.070 | 873 | 96.27% |
-| Analysis | GB_BayesFullPrior | 7.0348x | 0.000272 | 0.001045 | 0.000035 | 0.915 | 0.8690 | 0.070 | 873 | 96.27% |
-| Reconnaissance | RF | 1.0000x | 0.000492 | 0.002349 | 0.000276 | 0.440 | 0.9673 | 0.225 | 339 | 0.00% |
-| Reconnaissance | GB | 1.0000x | 0.000631 | 0.003369 | 0.000610 | 0.830 | 0.9611 | 0.220 | 364 | 0.00% |
-| Reconnaissance | PaperRF | 1.0000x | 0.000491 | 0.002336 | 0.000261 | 0.480 | 0.9674 | 0.235 | 337 | 57.25% |
-| Reconnaissance | GB_BayesPrior | 7.0348x | 0.000568 | 0.002545 | 0.000340 | 0.400 | 0.9604 | 0.040 | 363 | 44.20% |
-| Reconnaissance | GB_BayesFullPrior | 7.0348x | 0.000568 | 0.002545 | 0.000340 | 0.400 | 0.9604 | 0.040 | 363 | 44.20% |
+| Attack | Model | Brier | LogLoss | ECE-15 | MCE-15 | `t*_F1` | Test F1 | `t*_c10` | Cost `c=10` |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| DoS | PaperRF | 0.000590 | 0.002447 | 0.000241 | 0.173891 | 0.420 | 0.8810 | 0.155 | 729 |
+| DoS | RF | 0.000989 | 0.003666 | 0.001611 | 0.439146 | 0.760 | 0.8650 | 0.485 | 767 |
+| Exploits | PaperRF | 0.001443 | 0.005596 | 0.000626 | 0.138126 | 0.460 | 0.9470 | 0.125 | 1,443 |
+| Exploits | RF | 0.001443 | 0.005596 | 0.000626 | 0.138126 | 0.460 | 0.9470 | 0.125 | 1,443 |
+| Backdoor | PaperRF | 0.000095 | 0.000434 | 0.000048 | 0.441776 | 0.280 | 0.9385 | 0.155 | 225 |
+| Backdoor | RF | 0.000084 | 0.000505 | 0.000046 | 0.320556 | 0.300 | 0.9535 | 0.145 | 174 |
+| Analysis | PaperRF | 0.000254 | 0.001105 | 0.000131 | 0.561502 | 0.670 | 0.8786 | 0.090 | 698 |
+| Analysis | RF | 0.000266 | 0.001522 | 0.000103 | 0.710000 | 0.550 | 0.8733 | 0.035 | 855 |
+| Reconnaissance | PaperRF | 0.000491 | 0.002336 | 0.000261 | 0.222035 | 0.480 | 0.9674 | 0.235 | 337 |
+| Reconnaissance | RF | 0.000492 | 0.002349 | 0.000276 | 0.216408 | 0.440 | 0.9673 | 0.225 | 339 |
 
 ## 2. Stratified Bootstrap 95% CIs (B=1000) & Exact Two-Sided McNemar Tests
 
 | Attack | Operating Point | Pair | Model A F1 (95% CI) | Model B F1 (95% CI) | Disc (A+/B-, A-/B+) | Exact `p`-value |
 |---|---|---|---|---|---|---:|
-| DoS | F1-Optimal | RF vs GB | 0.8650 [0.8507, 0.8786] | 0.8200 [0.8049, 0.8364] | (181, 63) | 2.099e-14 |
-| DoS | F1-Optimal | RF vs PaperRF | 0.8650 [0.8507, 0.8786] | 0.8810 [0.8683, 0.8943] | (54, 95) | 9.833e-04 |
-| DoS | F1-Optimal | GB vs PaperRF | 0.8200 [0.8049, 0.8364] | 0.8810 [0.8683, 0.8943] | (57, 216) | 5.884e-23 |
-| DoS | Cost-Opt c=10 | RF vs GB | 0.8262 [0.8131, 0.8391] | 0.7591 [0.7460, 0.7724] | (287, 51) | 4.951e-41 |
-| DoS | Cost-Opt c=10 | RF vs PaperRF | 0.8262 [0.8131, 0.8391] | 0.8301 [0.8170, 0.8435] | (63, 74) | 3.930e-01 |
-| DoS | Cost-Opt c=10 | GB vs PaperRF | 0.7591 [0.7460, 0.7724] | 0.8301 [0.8170, 0.8435] | (72, 319) | 3.375e-38 |
-| Exploits | F1-Optimal | RF vs GB | 0.9470 [0.9427, 0.9510] | 0.9328 [0.9280, 0.9374] | (231, 76) | 2.469e-19 |
-| Exploits | F1-Optimal | RF vs PaperRF | 0.9470 [0.9427, 0.9510] | 0.9470 [0.9429, 0.9510] | (0, 0) | 1.000e+00 |
-| Exploits | F1-Optimal | GB vs PaperRF | 0.9328 [0.9280, 0.9374] | 0.9470 [0.9429, 0.9510] | (76, 231) | 2.469e-19 |
-| Exploits | Cost-Opt c=10 | RF vs GB | 0.9197 [0.9151, 0.9243] | 0.9139 [0.9093, 0.9187] | (241, 166) | 2.355e-04 |
-| Exploits | Cost-Opt c=10 | RF vs PaperRF | 0.9197 [0.9151, 0.9243] | 0.9197 [0.9150, 0.9243] | (0, 0) | 1.000e+00 |
-| Exploits | Cost-Opt c=10 | GB vs PaperRF | 0.9139 [0.9093, 0.9187] | 0.9197 [0.9150, 0.9243] | (166, 241) | 2.355e-04 |
-| Backdoor | F1-Optimal | RF vs GB | 0.9535 [0.9380, 0.9674] | 0.9386 [0.9204, 0.9548] | (25, 15) | 1.539e-01 |
-| Backdoor | F1-Optimal | RF vs PaperRF | 0.9535 [0.9380, 0.9674] | 0.9385 [0.9205, 0.9559] | (15, 3) | 7.538e-03 |
-| Backdoor | F1-Optimal | GB vs PaperRF | 0.9386 [0.9204, 0.9548] | 0.9385 [0.9205, 0.9559] | (22, 20) | 8.776e-01 |
-| Backdoor | Cost-Opt c=10 | RF vs GB | 0.9212 [0.9031, 0.9395] | 0.9036 [0.8853, 0.9227] | (39, 22) | 3.962e-02 |
-| Backdoor | Cost-Opt c=10 | RF vs PaperRF | 0.9212 [0.9031, 0.9395] | 0.9041 [0.8847, 0.9236] | (22, 7) | 8.130e-03 |
-| Backdoor | Cost-Opt c=10 | GB vs PaperRF | 0.9036 [0.8853, 0.9227] | 0.9041 [0.8847, 0.9236] | (29, 31) | 8.974e-01 |
-| Analysis | F1-Optimal | RF vs GB | 0.8733 [0.8484, 0.8968] | 0.8690 [0.8428, 0.8944] | (6, 3) | 5.078e-01 |
-| Analysis | F1-Optimal | RF vs PaperRF | 0.8733 [0.8484, 0.8968] | 0.8786 [0.8557, 0.9009] | (1, 5) | 2.188e-01 |
-| Analysis | F1-Optimal | GB vs PaperRF | 0.8690 [0.8428, 0.8944] | 0.8786 [0.8557, 0.9009] | (1, 8) | 3.906e-02 |
-| Analysis | Cost-Opt c=10 | RF vs GB | 0.5424 [0.5241, 0.5616] | 0.5708 [0.5498, 0.5907] | (70, 169) | 1.264e-10 |
-| Analysis | Cost-Opt c=10 | RF vs PaperRF | 0.5424 [0.5241, 0.5616] | 0.6962 [0.6727, 0.7203] | (52, 425) | 7.747e-74 |
-| Analysis | Cost-Opt c=10 | GB vs PaperRF | 0.5708 [0.5498, 0.5907] | 0.6962 [0.6727, 0.7203] | (97, 371) | 8.464e-39 |
-| Reconnaissance | F1-Optimal | RF vs GB | 0.9673 [0.9626, 0.9722] | 0.9611 [0.9560, 0.9659] | (46, 10) | 1.245e-06 |
-| Reconnaissance | F1-Optimal | RF vs PaperRF | 0.9673 [0.9626, 0.9722] | 0.9674 [0.9627, 0.9721] | (5, 6) | 1.000e+00 |
-| Reconnaissance | F1-Optimal | GB vs PaperRF | 0.9611 [0.9560, 0.9659] | 0.9674 [0.9627, 0.9721] | (14, 51) | 4.475e-06 |
-| Reconnaissance | Cost-Opt c=10 | RF vs GB | 0.9640 [0.9594, 0.9688] | 0.9538 [0.9484, 0.9591] | (69, 8) | 3.137e-13 |
-| Reconnaissance | Cost-Opt c=10 | RF vs PaperRF | 0.9640 [0.9594, 0.9688] | 0.9644 [0.9599, 0.9690] | (0, 2) | 5.000e-01 |
-| Reconnaissance | Cost-Opt c=10 | GB vs PaperRF | 0.9538 [0.9484, 0.9591] | 0.9644 [0.9599, 0.9690] | (7, 70) | 3.525e-14 |
+| DoS | F1-Optimal | RF vs PaperRF | 0.8650 [0.8507, 0.8786] | 0.8810 [0.8677, 0.8952] | (54, 95) | 9.833e-04 |
+| DoS | Cost-Opt c=10 | RF vs PaperRF | 0.8262 [0.8131, 0.8391] | 0.8301 [0.8170, 0.8432] | (63, 74) | 3.930e-01 |
+| Exploits | F1-Optimal | RF vs PaperRF | 0.9470 [0.9427, 0.9510] | 0.9470 [0.9428, 0.9509] | (0, 0) | 1.000e+00 |
+| Exploits | Cost-Opt c=10 | RF vs PaperRF | 0.9197 [0.9151, 0.9243] | 0.9197 [0.9150, 0.9244] | (0, 0) | 1.000e+00 |
+| Backdoor | F1-Optimal | RF vs PaperRF | 0.9535 [0.9380, 0.9674] | 0.9385 [0.9211, 0.9556] | (15, 3) | 7.538e-03 |
+| Backdoor | Cost-Opt c=10 | RF vs PaperRF | 0.9212 [0.9031, 0.9395] | 0.9041 [0.8853, 0.9236] | (22, 7) | 8.130e-03 |
+| Analysis | F1-Optimal | RF vs PaperRF | 0.8733 [0.8484, 0.8968] | 0.8786 [0.8539, 0.9028] | (1, 5) | 2.188e-01 |
+| Analysis | Cost-Opt c=10 | RF vs PaperRF | 0.5424 [0.5241, 0.5616] | 0.6962 [0.6717, 0.7197] | (52, 425) | 7.747e-74 |
+| Reconnaissance | F1-Optimal | RF vs PaperRF | 0.9673 [0.9626, 0.9722] | 0.9674 [0.9628, 0.9717] | (5, 6) | 1.000e+00 |
+| Reconnaissance | Cost-Opt c=10 | RF vs PaperRF | 0.9640 [0.9594, 0.9688] | 0.9644 [0.9596, 0.9690] | (0, 2) | 5.000e-01 |
 
 ## 3. Mixed-Flow 5-Specialist Orchestration (All 363,035 Held-Out Flows)
 
 | Model | Operating Point | Benign FPR (%) | Target-5 Recall (%) | Target-5 F1 | Unseen-4 Flagged (%) | All-9 Recall (%) | All-9 F1 | Inference (s) |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| RF | F1-Optimal | 0.16% | 96.90% | 0.9575 | 29.54% | 72.20% | 0.8219 | 15.16s |
-| RF | Cost-Opt c=10 | 0.40% | 99.77% | 0.9349 | 36.07% | 76.41% | 0.8258 | 15.16s |
-| GB | F1-Optimal | 0.18% | 95.83% | 0.9495 | 31.12% | 72.10% | 0.8197 | 10.73s |
-| GB | Cost-Opt c=10 | 0.41% | 99.55% | 0.9326 | 35.26% | 75.98% | 0.8222 | 10.73s |
-| PaperRF | F1-Optimal | 0.16% | 96.69% | 0.9574 | 28.88% | 71.83% | 0.8200 | 11.33s |
-| PaperRF | Cost-Opt c=10 | 0.35% | 99.43% | 0.9412 | 36.21% | 76.25% | 0.8299 | 11.33s |
+| RF | F1-Optimal | 0.16% | 96.90% | 0.9575 | 29.54% | 72.20% | 0.8219 | 11.50s |
+| RF | Cost-Opt c=10 | 0.40% | 99.77% | 0.9349 | 36.07% | 76.41% | 0.8258 | 11.50s |
+| PaperRF | F1-Optimal | 0.16% | 96.69% | 0.9574 | 28.88% | 71.83% | 0.8200 | 7.98s |
+| PaperRF | Cost-Opt c=10 | 0.35% | 99.43% | 0.9412 | 36.21% | 76.25% | 0.8299 | 7.98s |
 
 ### 3.1 Per-Class Unseen-4 & Target-5 Detection (`Cost-Opt c=10`)
 
-| Traffic Class | Flows | PaperRF (%) | RF (%) | GB (%) |
-|---|---:|---:|---:|---:|
-| Benign | 346,841 | 0.35% | 0.40% | 0.41% |
-| DoS | 1,130 | 99.47% | 99.56% | 99.38% |
-| Exploits | 5,533 | 99.39% | 99.77% | 99.44% |
-| Backdoor | 398 | 99.50% | 100.00% | 99.75% |
-| Analysis | 446 | 96.64% | 98.65% | 98.65% |
-| Reconnaissance | 2,749 | 99.96% | 100.00% | 99.96% |
-| Fuzzers | 4,353 | 17.14% | 17.05% | 16.22% |
-| Generic | 1,246 | 90.69% | 90.93% | 90.13% |
-| Shellcode | 305 | 78.69% | 76.39% | 75.74% |
-| Worms | 34 | 100.00% | 100.00% | 100.00% |
-| TARGET_5_TOTAL | 10,256 | 99.43% | 99.77% | 99.55% |
-| UNSEEN_4_TOTAL | 5,938 | 36.21% | 36.07% | 35.26% |
-| ALL_ATTACKS_TOTAL | 16,194 | 76.25% | 76.41% | 75.98% |
+| Traffic Class | Flows | PaperRF (%) | Ours RF (%) |
+|---|---:|---:|---:|
+| Benign | 346,841 | 0.35% | 0.40% |
+| DoS | 1,130 | 99.47% | 99.56% |
+| Exploits | 5,533 | 99.39% | 99.77% |
+| Backdoor | 398 | 99.50% | 100.00% |
+| Analysis | 446 | 96.64% | 98.65% |
+| Reconnaissance | 2,749 | 99.96% | 100.00% |
+| Fuzzers | 4,353 | 17.14% | 17.05% |
+| Generic | 1,246 | 90.69% | 90.93% |
+| Shellcode | 305 | 78.69% | 76.39% |
+| Worms | 34 | 100.00% | 100.00% |
+| TARGET_5_TOTAL | 10,256 | 99.43% | 99.77% |
+| UNSEEN_4_TOTAL | 5,938 | 36.21% | 36.07% |
+| ALL_ATTACKS_TOTAL | 16,194 | 76.25% | 76.41% |

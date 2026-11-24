@@ -52,11 +52,10 @@ def test_get_all_splits_for_analysis():
     ("subdir", "prefix"),
     [
         ("baseline", "rf"),
-        ("improved", "gb"),
         ("paper_original", "paper_rf"),
     ],
 )
-def test_all_30_model_bundles_exist_and_metadata_valid(results_dir: Path, subdir: str, prefix: str):
+def test_all_20_model_bundles_exist_and_metadata_valid(results_dir: Path, subdir: str, prefix: str):
     models_dir = results_dir / subdir / "models"
     assert models_dir.is_dir()
 
@@ -86,7 +85,6 @@ def test_all_30_model_bundles_exist_and_metadata_valid(results_dir: Path, subdir
     ("subdir", "stem"),
     [
         ("baseline", "rf_analysis_nosmote"),
-        ("improved", "gb_analysis_nosmote"),
         ("paper_original", "paper_rf_analysis_nosmote"),
     ],
 )
@@ -109,7 +107,6 @@ def test_sample_joblib_models_predict_valid_probabilities(results_dir: Path, sub
 def test_summary_and_cost_csv_schemas(results_dir: Path):
     for rel_path in [
         "baseline/summary_rf_comparison.csv",
-        "improved/summary_gb_comparison.csv",
         "paper_original/summary_paper_rf_comparison.csv",
     ]:
         df = pd.read_csv(results_dir / rel_path)
@@ -120,6 +117,6 @@ def test_summary_and_cost_csv_schemas(results_dir: Path):
         assert df[["Best_k", "Threshold", "F1_Score"]].notna().all().all()
 
     cost_df = pd.read_csv(results_dir / "improved" / "cost_sensitive_evaluation.csv")
-    assert len(cost_df) == 40
+    assert len(cost_df) == 20
     assert set(cost_df["Cost_Ratio_c"].unique()) == {1, 5, 10, 20}
-    assert set(cost_df["Model"].unique()) == {"RF", "GB"}
+    assert set(cost_df["Model"].unique()) == {"RF"}

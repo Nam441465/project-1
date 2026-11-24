@@ -6,10 +6,10 @@ artifacts and `data/processed/{train,heldout_test}.parquet`.
 ZERO model fitting, training, or `.joblib` modification is performed.
 
 Generates under `results/improved/`:
-  - `calibration_diagnostics.csv`: Brier, LogLoss, ECE-15, MCE-15, PR-AUC, and
-    analytical Bayes prior-odds correction for HistGB (`nosmote` downsampling).
+  - `calibration_diagnostics.csv`: Brier, LogLoss, ECE-15, MCE-15, PR-AUC for
+    Ours Improved RF and Paper-Exact RF (`nosmote`).
   - `bootstrap_mcnemar_tests.csv`: Stratified Bootstrap 95% CIs (B=1000) and
-    exact two-sided McNemar tests (`RF vs GB`, `RF vs PaperRF`, `GB vs PaperRF`).
+    exact two-sided McNemar tests (`RF vs PaperRF`).
   - `mixed_flow_orchestration_eval.csv`: Any-of-5 specialist union evaluation
     across all 363,035 rows of `heldout_test.parquet` (Benign, 5 targets,
     and 4 unseen attack classes: Fuzzers, Generic, Shellcode, Worms).
@@ -21,7 +21,6 @@ And under `figures/`:
 
 from __future__ import annotations
 
-import json
 import os
 import sys
 import time
@@ -32,7 +31,6 @@ import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy.special import expit, logit
 from scipy.stats import binomtest
 from sklearn.metrics import average_precision_score, brier_score_loss, log_loss
 
@@ -75,11 +73,6 @@ MODEL_SPECS = {
         "prefix": "rf",
         "summary_csv": BASELINE_DIR / "summary_rf_comparison.csv",
     },
-    "GB": {
-        "dir": IMPROVED_DIR,
-        "prefix": "gb",
-        "summary_csv": IMPROVED_DIR / "summary_gb_comparison.csv",
-    },
     "PaperRF": {
         "dir": PAPER_DIR,
         "prefix": "paper_rf",
@@ -88,7 +81,6 @@ MODEL_SPECS = {
 }
 
 UNSEEN_ATTACKS = ["Fuzzers", "Generic", "Shellcode", "Worms"]
-GB_DOWNSAMPLE_CAP = 150_000
 COST_RATIO_C = 10
 THRESHOLD_GRID = np.round(np.arange(0.005, 1.0, 0.005), 4)
 
@@ -119,13 +111,6 @@ def compute_ece_mce(
     return float(ece), float(mce)
 
 
-def bayes_prior_shift(proba: np.ndarray, odds_ratio: float) -> np.ndarray:
-    """Apply closed-form Bayes prior-odds adjustment without fitting any parameters."""
-    eps = 1e-15
-    p_clip = np.clip(np.asarray(proba, dtype=np.float64), eps, 1.0 - eps)
-    return np.asarray(expit(logit(p_clip) - np.log(odds_ratio)), dtype=np.float64)
-
-
 def _load_saved_arrays(model_key: str, attack: str) -> dict[str, np.ndarray]:
     """Load saved validation/test labels and probabilities for nosmote models."""
     spec = MODEL_SPECS[model_key]
@@ -154,7 +139,7 @@ def _load_thresholds() -> dict[str, dict[str, dict[str, float]]]:
 
     cost_df = pd.read_csv(IMPROVED_DIR / "cost_sensitive_evaluation.csv")
     c10_df = cost_df[cost_df["Cost_Ratio_c"] == COST_RATIO_C]
-    for model_key in ("RF", "GB"):
+    for model_key in ("RF",):
         sub = c10_df[c10_df["Model"] == model_key]
         for _, row in sub.iterrows():
             thresholds[model_key]["Cost-Opt c=10"][row["Attack"]] = float(
@@ -190,120 +175,36 @@ def _select_f1_opt_threshold(y_val: np.ndarray, p_val: np.ndarray) -> float:
 def run_calibration_diagnostics(
     saved_thresholds: dict[str, dict[str, dict[str, float]]]
 ) -> pd.DataFrame:
-    """Evaluate calibration metrics and analytical Bayes prior correction."""
+    """Evaluate probability calibration metrics for Ours Improved RF vs Paper-Exact RF."""
     print("\n" + "=" * 72)
-    print("  1. CALIBRATION DIAGNOSTICS & ANALYTICAL BAYES PRIOR CORRECTION")
+    print("  1. PROBABILITY CALIBRATION DIAGNOSTICS (OURS RF VS PAPER-EXACT RF)")
     print("=" * 72)
-
-    train_attacks = load_split("train", columns=["Attack"])["Attack"]
-    vc_train = train_attacks.value_counts()
-    n_maj_full = int(vc_train.get("Benign", 0))
-    n_maj_sub = min(GB_DOWNSAMPLE_CAP, n_maj_full)
-    maj_odds_ratio = float(n_maj_full) / float(max(1, n_maj_sub))
-    print(
-        f"  Train Benign count: {n_maj_full:,} | GB cap: {n_maj_sub:,} "
-        f"| Analytical prior ratio: {maj_odds_ratio:.6f}x (log={np.log(maj_odds_ratio):.6f})"
-    )
 
     rows = []
     for attack in TARGET_ATTACKS:
-        n_pos_train = int(vc_train.get(attack, 0))
-        gb_meta_path = IMPROVED_DIR / "models" / f"gb_{attack.lower()}_nosmote_metadata.json"
-        gb_meta = json.loads(gb_meta_path.read_text(encoding="utf-8"))
-        gb_class_weight = str(gb_meta.get("class_weight", "None"))
-
-        # Load base arrays
         arrays_by_model = {m: _load_saved_arrays(m, attack) for m in MODEL_SPECS}
-        gb_arr = arrays_by_model["GB"]
 
-        # Raw models + analytical Bayes prior shifts (zero fitted parameters)
-        variants: list[tuple[str, float, np.ndarray, np.ndarray, np.ndarray, np.ndarray, float | None, float | None]] = []
-        for m in ("RF", "GB", "PaperRF"):
-            arr = arrays_by_model[m]
-            variants.append(
-                (
-                    m,
-                    1.0,
-                    arr["y_val"],
-                    arr["p_val"],
-                    arr["y_test"],
-                    arr["p_test"],
-                    saved_thresholds[m]["F1-Optimal"][attack],
-                    saved_thresholds[m]["Cost-Opt c=10"][attack],
-                )
-            )
+        for name in ("PaperRF", "RF"):
+            arr = arrays_by_model[name]
+            y_val, p_val = arr["y_val"], arr["p_val"]
+            y_test, p_test = arr["y_test"], arr["p_test"]
+            t_f1 = saved_thresholds[name]["F1-Optimal"][attack]
+            t_c10 = saved_thresholds[name]["Cost-Opt c=10"][attack]
 
-        # Pure majority-downsampling Bayes prior shift (7.03484x)
-        p_val_bayes = bayes_prior_shift(gb_arr["p_val"], maj_odds_ratio)
-        p_test_bayes = bayes_prior_shift(gb_arr["p_test"], maj_odds_ratio)
-        variants.append(
-            (
-                "GB_BayesPrior",
-                maj_odds_ratio,
-                gb_arr["y_val"],
-                p_val_bayes,
-                gb_arr["y_test"],
-                p_test_bayes,
-                None,
-                None,
-            )
-        )
-
-        # Full analytical shift accounting for class_weight='balanced' (DoS only)
-        if gb_class_weight == "balanced":
-            full_ratio = float(n_maj_full) / float(max(1, n_pos_train))
-            p_val_full = bayes_prior_shift(gb_arr["p_val"], full_ratio)
-            p_test_full = bayes_prior_shift(gb_arr["p_test"], full_ratio)
-        else:
-            full_ratio = maj_odds_ratio
-            p_val_full = p_val_bayes
-            p_test_full = p_test_bayes
-        variants.append(
-            (
-                "GB_BayesFullPrior",
-                full_ratio,
-                gb_arr["y_val"],
-                p_val_full,
-                gb_arr["y_test"],
-                p_test_full,
-                None,
-                None,
-            )
-        )
-
-        raw_gb_ece = None
-        for name, ratio, y_val, p_val, y_test, p_test, t_f1, t_c10 in variants:
             brier = float(brier_score_loss(y_test, p_test))
             ll = float(log_loss(y_test, np.clip(p_test, 1e-15, 1.0 - 1e-15), labels=[0, 1]))
             ece_15, mce_15 = compute_ece_mce(y_test, p_test, n_bins=15)
             pr_auc = float(average_precision_score(y_test, p_test))
-
-            if name == "GB":
-                raw_gb_ece = ece_15
-
-            if t_f1 is None:
-                t_f1 = _select_f1_opt_threshold(y_val, p_val)
-            if t_c10 is None:
-                t_c10 = _select_cost_opt_threshold(y_val, p_val, COST_RATIO_C)
 
             val_f1_res = evaluate_binary_predictions(y_val, p_val, t_f1)
             test_f1_res = evaluate_binary_predictions(y_test, p_test, t_f1)
             test_c10_res = evaluate_binary_predictions(y_test, p_test, t_c10)
             test_cost_c10 = int(test_c10_res["FP"]) + COST_RATIO_C * int(test_c10_res["FN"])
 
-            ece_red = (
-                ((raw_gb_ece - ece_15) / raw_gb_ece * 100.0)
-                if (raw_gb_ece and raw_gb_ece > 0)
-                else 0.0
-            )
-
             rows.append(
                 {
                     "Attack": attack,
                     "Model": name,
-                    "GB_Class_Weight": gb_class_weight,
-                    "Prior_Shift_Factor": round(ratio, 6),
-                    "Log_Odds_Shift": round(float(np.log(ratio)), 6),
                     "Brier_Score": round(brier, 6),
                     "Log_Loss": round(ll, 6),
                     "ECE_15": round(ece_15, 6),
@@ -318,7 +219,6 @@ def run_calibration_diagnostics(
                     "Test_Cost_c10": int(test_cost_c10),
                     "Test_FN_Cost_c10": int(test_c10_res["FN"]),
                     "Test_FP_Cost_c10": int(test_c10_res["FP"]),
-                    "ECE_Reduction_vs_RawGB_Pct": round(float(ece_red), 2),
                 }
             )
 
@@ -404,7 +304,7 @@ def run_bootstrap_and_mcnemar(
     print(f"  2. STRATIFIED BOOTSTRAP 95% CIs (B={n_boot}) & EXACT MCNEMAR TESTS")
     print("=" * 72)
 
-    pairs = [("RF", "GB"), ("RF", "PaperRF"), ("GB", "PaperRF")]
+    pairs = [("RF", "PaperRF")]
     operating_points = ["F1-Optimal", "Cost-Opt c=10"]
     n_tests_total = len(TARGET_ATTACKS) * len(operating_points) * len(pairs)
 
@@ -412,14 +312,14 @@ def run_bootstrap_and_mcnemar(
     for a_idx, attack in enumerate(TARGET_ATTACKS):
         arrays = {m: _load_saved_arrays(m, attack) for m in MODEL_SPECS}
         y_test = arrays["RF"]["y_test"]
-        for m in ("GB", "PaperRF"):
+        for m in ("PaperRF",):
             if not np.array_equal(y_test, arrays[m]["y_test"]):
                 raise ValueError(f"y_test mismatch between RF and {m} for {attack}")
 
         for op_idx, op in enumerate(operating_points):
             preds = {}
             boots = {}
-            for m_idx, m in enumerate(("RF", "GB", "PaperRF")):
+            for m_idx, m in enumerate(("RF", "PaperRF")):
                 t = saved_thresholds[m][op][attack]
                 pred = (arrays[m]["p_test"] >= t).astype(np.int8)
                 preds[m] = pred
@@ -645,18 +545,16 @@ def run_mixed_flow_orchestration(
 def plot_fig14_calibration_and_bootstrap(
     calib_df: pd.DataFrame, boot_df: pd.DataFrame
 ) -> None:
-    """Plot Fig 14: ECE calibration comparison + Bayes prior shift + F1 95% CIs."""
+    """Plot Fig 14: ECE calibration comparison + F1 95% CIs (Ours RF vs PaperRF)."""
     fig, axes = plt.subplots(1, 2, figsize=(14.5, 5.6))
 
-    # Panel 1: ECE-15 across RF, GB (raw), GB_BayesPrior, PaperRF
+    # Panel 1: ECE-15 across PaperRF and Ours RF
     ax = axes[0]
     x = np.arange(len(TARGET_ATTACKS))
-    w = 0.20
+    w = 0.34
     plot_models = [
-        ("PaperRF", "PaperRF (Raw)", "#8c96a5"),
-        ("RF", "Ours RF (Raw)", "#2b5c8f"),
-        ("GB", "Ours HistGB (Raw 150k)", "#e67e22"),
-        ("GB_BayesPrior", "HistGB + Bayes Prior (7.03x)", "#27ae60"),
+        ("PaperRF", "Paper-Exact RF", "#8c96a5"),
+        ("RF", "Ours Improved RF", "#2b5c8f"),
     ]
     for idx, (m_key, label, color) in enumerate(plot_models):
         vals = [
@@ -668,42 +566,37 @@ def plot_fig14_calibration_and_bootstrap(
             * 1000.0
             for att in TARGET_ATTACKS
         ]
-        bars = ax.bar(x + (idx - 1.5) * w, vals, width=w, label=label, color=color, edgecolor="black", linewidth=0.5)
+        bars = ax.bar(x + (idx - 0.5) * w, vals, width=w, label=label, color=color, edgecolor="black", linewidth=0.5)
         for bar, v in zip(bars, vals):
             ax.text(
                 bar.get_x() + bar.get_width() / 2,
-                bar.get_height() + 0.08,
+                bar.get_height() + 0.05,
                 f"{v:.2f}",
                 ha="center",
                 va="bottom",
-                fontsize=7.2,
-                rotation=90,
+                fontsize=8.0,
             )
 
     ax.set_xticks(x)
     ax.set_xticklabels(TARGET_ATTACKS)
     ax.set_ylabel("ECE-15 (x 10^-3, lower is better)")
-    ax.set_title("Probability Calibration (ECE-15) & Zero-Model Bayes Prior Correction")
-    ax.set_ylim(0, max(calib_df["ECE_15"].max() * 1000.0 * 1.32, 3.8))
+    ax.set_title("Probability Calibration (ECE-15): PaperRF vs Ours Improved RF")
+    ax.set_ylim(0, max(calib_df["ECE_15"].max() * 1000.0 * 1.32, 2.5))
     ax.legend(loc="upper right", frameon=True)
     ax.grid(axis="y", linestyle="--", alpha=0.35)
 
     # Panel 2: F1 Point Estimate + Stratified Bootstrap 95% CI (F1-Optimal)
     ax2 = axes[1]
     f1_sub = boot_df[boot_df["Operating_Point"] == "F1-Optimal"]
-    offsets = {"PaperRF": -0.22, "RF": 0.0, "GB": 0.22}
-    colors = {"PaperRF": "#8c96a5", "RF": "#2b5c8f", "GB": "#e67e22"}
-    markers = {"PaperRF": "s", "RF": "o", "GB": "^"}
+    offsets = {"PaperRF": -0.14, "RF": 0.14}
+    colors = {"PaperRF": "#8c96a5", "RF": "#2b5c8f"}
+    markers = {"PaperRF": "s", "RF": "o"}
 
-    for m_key in ("PaperRF", "RF", "GB"):
+    for m_key in ("PaperRF", "RF"):
         pts, err_lo, err_hi = [], [], []
         for att in TARGET_ATTACKS:
-            if m_key in ("RF", "GB"):
-                row = f1_sub[(f1_sub["Attack"] == att) & (f1_sub["Model_A"] == "RF") & (f1_sub["Model_B"] == "GB")].iloc[0]
-                prefix = "Model_A" if m_key == "RF" else "Model_B"
-            else:
-                row = f1_sub[(f1_sub["Attack"] == att) & (f1_sub["Model_B"] == "PaperRF")].iloc[0]
-                prefix = "Model_B"
+            row = f1_sub[(f1_sub["Attack"] == att) & (f1_sub["Model_A"] == "RF") & (f1_sub["Model_B"] == "PaperRF")].iloc[0]
+            prefix = "Model_A" if m_key == "RF" else "Model_B"
             f1 = float(row[f"{prefix}_F1"])
             lo = float(row[f"{prefix}_F1_CI_Low"])
             hi = float(row[f"{prefix}_F1_CI_High"])
@@ -723,12 +616,12 @@ def plot_fig14_calibration_and_bootstrap(
             label=f"{m_key} (95% CI)",
         )
 
-    # Annotate RF vs GB McNemar significance
+    # Annotate RF vs PaperRF McNemar significance
     for idx, att in enumerate(TARGET_ATTACKS):
         r = f1_sub[
             (f1_sub["Attack"] == att)
             & (f1_sub["Model_A"] == "RF")
-            & (f1_sub["Model_B"] == "GB")
+            & (f1_sub["Model_B"] == "PaperRF")
         ].iloc[0]
         p_val = float(r["McNemar_Exact_p"])
         sig_str = f"p={p_val:.1e}" if p_val < 0.001 else f"p={p_val:.3f}"
@@ -736,7 +629,7 @@ def plot_fig14_calibration_and_bootstrap(
         ax2.text(
             idx,
             min(0.99, y_top + 0.015),
-            f"RF vs GB\n{sig_str}",
+            f"RF vs PaperRF\n{sig_str}",
             ha="center",
             va="bottom",
             fontsize=7.5,
@@ -747,7 +640,7 @@ def plot_fig14_calibration_and_bootstrap(
     ax2.set_xticklabels(TARGET_ATTACKS)
     ax2.set_ylabel("F1-Score (95% Stratified Bootstrap CI, B=1000)")
     ax2.set_title("F1-Score Uncertainty & Exact McNemar Significance (F1-Optimal)")
-    ax2.set_ylim(0.55, 1.03)
+    ax2.set_ylim(0.75, 1.03)
     ax2.legend(loc="lower left", frameon=True)
     ax2.grid(axis="y", linestyle="--", alpha=0.35)
 
@@ -764,15 +657,15 @@ def plot_fig15_mixed_flow_orchestration(
     """Plot Fig 15: Full 363,035-flow Any-of-5 detection across Target-5, Unseen-4 & Benign."""
     fig, axes = plt.subplots(1, 2, figsize=(15.0, 5.8))
 
-    # Panel 1: Per-class Any-of-5 flag rate (%) for Cost-Opt c=10 across RF, GB, PaperRF
+    # Panel 1: Per-class Any-of-5 flag rate (%) for Cost-Opt c=10 across PaperRF & RF
     ax = axes[0]
     classes = ["Benign"] + TARGET_ATTACKS + UNSEEN_ATTACKS
     x = np.arange(len(classes))
-    w = 0.25
+    w = 0.34
     c10_df = eval_df[eval_df["Operating_Point"] == "Cost-Opt c=10"]
 
     for idx, (m_key, color) in enumerate(
-        [("PaperRF", "#8c96a5"), ("RF", "#2b5c8f"), ("GB", "#e67e22")]
+        [("PaperRF", "#8c96a5"), ("RF", "#2b5c8f")]
     ):
         rates = [
             float(
@@ -784,7 +677,7 @@ def plot_fig15_mixed_flow_orchestration(
             for cls in classes
         ]
         ax.bar(
-            x + (idx - 1) * w,
+            x + (idx - 0.5) * w,
             rates,
             width=w,
             label=f"{m_key} (Cost-Opt c=10)",
@@ -859,22 +752,21 @@ def generate_markdown_report(
     """Write scientific_diagnostics_findings.md purely from computed DataFrames."""
     out_md = IMPROVED_DIR / "scientific_diagnostics_findings.md"
     lines = [
-        "# Scientific Diagnostics Report (Zero-Model Analytical & Full Held-Out Evaluation)",
+        "# Scientific Diagnostics Report (Random Forest-Only Analytical & Full Held-Out Evaluation)",
         "",
-        "All metrics below were computed strictly from existing `.npy`, `.joblib`, `.json`, `.csv` artifacts and `data/processed/{train,heldout_test}.parquet` without fitting or modifying any model.",
+        "All metrics below were computed strictly from existing `.npy`, `.joblib`, `.json`, `.csv` artifacts and `data/processed/heldout_test.parquet` without fitting or modifying any model.",
         "",
-        "## 1. Probability Calibration & Analytical Bayes Prior-Odds Correction",
+        "## 1. Probability Calibration Diagnostics (`PaperRF` vs `Ours Improved RF`)",
         "",
-        "| Attack | Model | Prior Shift | Brier | LogLoss | ECE-15 | `t*_F1` | Test F1 | `t*_c10` | Cost `c=10` | ECE Reduction vs Raw GB |",
-        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        "| Attack | Model | Brier | LogLoss | ECE-15 | MCE-15 | `t*_F1` | Test F1 | `t*_c10` | Cost `c=10` |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for _, r in calib_df.iterrows():
         lines.append(
-            f"| {r['Attack']} | {r['Model']} | {r['Prior_Shift_Factor']:.4f}x | "
-            f"{r['Brier_Score']:.6f} | {r['Log_Loss']:.6f} | {r['ECE_15']:.6f} | "
+            f"| {r['Attack']} | {r['Model']} | "
+            f"{r['Brier_Score']:.6f} | {r['Log_Loss']:.6f} | {r['ECE_15']:.6f} | {r['MCE_15']:.6f} | "
             f"{r['Threshold_F1Opt']:.3f} | {r['Test_F1_at_F1Opt']:.4f} | "
-            f"{r['Threshold_Cost_c10']:.3f} | {int(r['Test_Cost_c10']):,} | "
-            f"{r['ECE_Reduction_vs_RawGB_Pct']:.2f}% |"
+            f"{r['Threshold_Cost_c10']:.3f} | {int(r['Test_Cost_c10']):,} |"
         )
 
     lines.extend(
@@ -915,13 +807,13 @@ def generate_markdown_report(
     c10 = eval_df[eval_df["Operating_Point"] == "Cost-Opt c=10"]
     pivot = c10.pivot(index="Traffic_Class", columns="Model_Family", values="Any5_Flag_Rate_Pct")
     tot_map = c10.drop_duplicates("Traffic_Class").set_index("Traffic_Class")["Total_Flows"].to_dict()
-    lines.append("| Traffic Class | Flows | PaperRF (%) | RF (%) | GB (%) |")
-    lines.append("|---|---:|---:|---:|---:|")
+    lines.append("| Traffic Class | Flows | PaperRF (%) | Ours RF (%) |")
+    lines.append("|---|---:|---:|---:|")
     order = ["Benign"] + TARGET_ATTACKS + UNSEEN_ATTACKS + ["TARGET_5_TOTAL", "UNSEEN_4_TOTAL", "ALL_ATTACKS_TOTAL"]
     for cls in order:
         lines.append(
             f"| {cls} | {int(tot_map[cls]):,} | {pivot.loc[cls, 'PaperRF']:.2f}% | "
-            f"{pivot.loc[cls, 'RF']:.2f}% | {pivot.loc[cls, 'GB']:.2f}% |"
+            f"{pivot.loc[cls, 'RF']:.2f}% |"
         )
 
     out_md.write_text("\n".join(lines) + "\n", encoding="utf-8")

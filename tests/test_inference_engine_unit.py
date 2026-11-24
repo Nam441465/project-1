@@ -72,9 +72,8 @@ def _create_mini_bundle(
 def isolated_engine_dir(tmp_path: Path) -> Path:
     feats = ["L4_DST_PORT", "PROTOCOL", "IN_BYTES"]
     _create_mini_bundle(tmp_path, "baseline", "rf_dos_nosmote", "DoS", "nosmote", 0.60, feats, fit_with_df=False)
-    _create_mini_bundle(tmp_path, "improved", "gb_dos_nosmote", "DoS", "nosmote", 0.80, feats, fit_with_df=True)
     _create_mini_bundle(tmp_path, "paper_original", "paper_rf_dos_nosmote", "DoS", "nosmote", 0.50, feats, fit_with_df=False)
-    _create_mini_bundle(tmp_path, "baseline", "rf_analysis_nosmote", "Analysis", "nosmote", 0.035, feats, fit_with_df=False)
+    _create_mini_bundle(tmp_path, "baseline", "rf_analysis_nosmote", "Analysis", "nosmote", 0.035, feats, fit_with_df=True)
     return tmp_path
 
 
@@ -89,15 +88,14 @@ def test_get_near_miss_bounds_prevents_zone_collapse():
     assert get_near_miss_bounds(0.0) == (0.0, 0.0)
 
 
-def test_build_consensus_matrix_5x3():
+def test_build_consensus_matrix_5x2():
     assert build_consensus_matrix(pd.DataFrame()) == {}
 
     rows = []
     for att in ["DoS", "Exploits", "Backdoor", "Analysis", "Reconnaissance"]:
         for fam, status, prob, th in [
-            ("PAPER", "BENIGN", 0.05, 0.50),
-            ("RF", "SUSPICIOUS", 0.30, 0.45),
-            ("GB", "ATTACK", 0.90, 0.80),
+            ("PAPER", "SUSPICIOUS", 0.30, 0.50),
+            ("RF", "ATTACK", 0.90, 0.45),
         ]:
             rows.append(
                 {
@@ -115,8 +113,8 @@ def test_build_consensus_matrix_5x3():
     mat = matrices["Without SMOTE"]
     assert len(mat) == 5
     assert list(mat["Attack"]) == ["DoS", "Exploits", "Backdoor", "Analysis", "Reconnaissance"]
-    assert (mat["Consensus"] == "1/3 (+1 DPI)").all()
-    assert (mat["Total_Latency_ms"] == 3.75).all()
+    assert (mat["Consensus"] == "1/2 (+1 DPI)").all()
+    assert (mat["Total_Latency_ms"] == 2.50).all()
 
 
 def test_protocol_decoder_nan_safe_and_dpi_heuristics():
@@ -157,8 +155,8 @@ def test_engine_discovery_cache_and_sorted_registry(isolated_engine_dir: Path, t
 
     keys = list(engine.models_registry.keys())
     assert keys == sorted(keys)
-    assert len(keys) == 4
-    assert engine.get_available_model_families() == ["GB", "RF", "PAPER"]
+    assert len(keys) == 3
+    assert engine.get_available_model_families() == ["RF", "PAPER"]
     assert engine.get_available_conditions() == [("nosmote", "Without SMOTE")]
     assert cache_path.exists()
 
@@ -169,7 +167,7 @@ def test_engine_discovery_cache_and_sorted_registry(isolated_engine_dir: Path, t
         lazy_load=True,
         index_cache_path=cache_path,
     )
-    assert len(engine2.models_registry) == 4
+    assert len(engine2.models_registry) == 3
 
 
 def test_engine_predict_single_and_batch_strict_and_dirty_csv(isolated_engine_dir: Path):

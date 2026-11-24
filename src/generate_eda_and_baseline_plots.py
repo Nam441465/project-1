@@ -679,9 +679,9 @@ Bảng tính điểm Mutual Information (không dùng SMOTE) chỉ ra mỗi lo�
   2. Với `DoS`: Muốn giảm {int(dos_n['FN']) - int(dos_s['FN'])} ca bỏ sót (từ {int(dos_n['FN'])} xuống {int(dos_s['FN'])}), hệ thống SMOTE phải trả giá bằng **{int(dos_s['FP']) - int(dos_n['FP'])} ca báo giả tăng thêm** ({int(dos_n['FP'])} lên {int(dos_s['FP'])}).
   3. Với `Backdoor`: Cả hai cấu hình đều đạt khả năng phát hiện cao (>94% Recall), nhưng Không SMOTE giữ mức cảnh báo giả thấp nhất ({int(bd_n['FP'])} FP).
 - **Kết luận định hướng Giai đoạn 2:** Không thể giải quyết bài toán bỏ sót FN bằng việc lạm dụng SMOTE. Cần chuyển hướng sang:
-  1. Mô hình Gradient Boosting (`HistGradientBoosting`) với khả năng học ranh giới phi tuyến tốt và tốc độ vượt trội.
-  2. Kỹ thuật **Dò ngưỡng theo Recall mục tiêu** ($R \\ge 0.95, 0.98, 0.99$).
-  3. **Mô hình nhạy chi phí (Cost-Sensitive Learning)** gán trọng số thiệt hại $c \\times FN$ cao hơn $FP$.
+  1. Kỹ thuật **Dò ngưỡng theo Recall mục tiêu** ($R \\ge 0.95, 0.98, 0.99$) trên Random Forest.
+  2. **Mô hình nhạy chi phí (Cost-Sensitive Learning)** gán trọng số thiệt hại $c \\times FN$ cao hơn $FP$.
+  3. **Giải phẫu mẫu bỏ sót (FN Forensics) & Kiến trúc 2-Tier NIDS** chuyển tiếp các luồng vùng nghi vấn (`Near-Miss`) sang kiểm tra sâu.
 
 ---
 *Báo cáo được tự động khởi tạo bởi script `src/generate_eda_and_baseline_plots.py`.*

@@ -76,14 +76,13 @@ def run_recall_targeted_evaluation():
     print("=" * 75)
 
     rf_sum = pd.read_csv(BASELINE_DIR / "summary_rf_comparison.csv")
-    gb_sum = pd.read_csv(IMPROVED_DIR / "summary_gb_comparison.csv")
 
     target_recalls = [0.95, 0.98, 0.99]
     records = []
     thresholds_scan = np.round(np.linspace(0.99, 0.001, 990), 4)
 
     for att in TARGET_ATTACKS:
-        for model_name, dir_path, sum_df in [("RF", BASELINE_DIR, rf_sum), ("GB", IMPROVED_DIR, gb_sum)]:
+        for model_name, dir_path, sum_df in [("RF", BASELINE_DIR, rf_sum)]:
             prefix = model_name.lower()
             y_val = np.load(dir_path / f"{prefix}_{att.lower()}_nosmote_y_val.npy")
             p_val = np.load(dir_path / f"{prefix}_{att.lower()}_nosmote_best_proba_val.npy")
@@ -164,14 +163,13 @@ def run_cost_sensitive_evaluation():
     print("=" * 75)
 
     rf_sum = pd.read_csv(BASELINE_DIR / "summary_rf_comparison.csv")
-    gb_sum = pd.read_csv(IMPROVED_DIR / "summary_gb_comparison.csv")
 
     c_ratios = [1, 5, 10, 20]
     records = []
     thresholds_scan = np.round(np.linspace(0.005, 0.995, 199), 3)
 
     for att in TARGET_ATTACKS:
-        for model_name, dir_path, sum_df in [("RF", BASELINE_DIR, rf_sum), ("GB", IMPROVED_DIR, gb_sum)]:
+        for model_name, dir_path, sum_df in [("RF", BASELINE_DIR, rf_sum)]:
             prefix = model_name.lower()
             y_val = np.load(dir_path / f"{prefix}_{att.lower()}_nosmote_y_val.npy")
             p_val = np.load(dir_path / f"{prefix}_{att.lower()}_nosmote_best_proba_val.npy")
@@ -315,11 +313,10 @@ def _collect_forensic_rows(
 
 def run_false_negative_forensics(df_cost: pd.DataFrame | None = None):
     print("\n" + "=" * 75)
-    print(" 3. KHỞI CHẠY GIẢI PHẪU MẪU BỊ BỎ SÓT (RF + GB + PAPER-EXACT RF)")
+    print(" 3. KHỞI CHẠY GIẢI PHẪU MẪU BỊ BỎ SÓT (OURS RF + PAPER-EXACT RF)")
     print("=" * 75)
 
     rf_sum = pd.read_csv(BASELINE_DIR / "summary_rf_comparison.csv")
-    gb_sum = pd.read_csv(IMPROVED_DIR / "summary_gb_comparison.csv")
     paper_sum_path = PAPER_DIR / "summary_paper_rf_comparison.csv"
     paper_sum = pd.read_csv(paper_sum_path) if paper_sum_path.exists() else None
     if df_cost is None:
@@ -330,15 +327,11 @@ def run_false_negative_forensics(df_cost: pd.DataFrame | None = None):
         X_test, y_test = get_binary_data(att, split="heldout_test", drop_ip=True)
 
         p_rf = np.load(BASELINE_DIR / f"rf_{att.lower()}_nosmote_best_proba_test.npy")
-        p_gb = np.load(IMPROVED_DIR / f"gb_{att.lower()}_nosmote_best_proba_test.npy")
 
         t_rf_f1 = float(rf_sum[(rf_sum["Attack"] == att) & (rf_sum["Condition"] == "Without SMOTE")]["Threshold"].iloc[0])
-        t_gb_f1 = float(gb_sum[(gb_sum["Attack"] == att) & (gb_sum["Condition"] == "Without SMOTE")]["Threshold"].iloc[0])
         t_rf_c10 = float(df_cost[(df_cost["Attack"] == att) & (df_cost["Model"] == "RF") & (df_cost["Cost_Ratio_c"] == 10)]["Optimal_Threshold"].iloc[0])
-        t_gb_c10 = float(df_cost[(df_cost["Attack"] == att) & (df_cost["Model"] == "GB") & (df_cost["Cost_Ratio_c"] == 10)]["Optimal_Threshold"].iloc[0])
 
         all_records.extend(_collect_forensic_rows(att, "RF", "F1-Optimal", X_test, y_test, p_rf, t_rf_f1))
-        all_records.extend(_collect_forensic_rows(att, "GB", "F1-Optimal", X_test, y_test, p_gb, t_gb_f1))
 
         paper_p_path = PAPER_DIR / f"paper_rf_{att.lower()}_nosmote_best_proba_test.npy"
         if paper_sum is not None and paper_p_path.exists():
@@ -347,7 +340,6 @@ def run_false_negative_forensics(df_cost: pd.DataFrame | None = None):
             all_records.extend(_collect_forensic_rows(att, "PaperRF", "F1-Optimal", X_test, y_test, p_pr, t_pr_f1))
 
         all_records.extend(_collect_forensic_rows(att, "RF", "Cost-Opt c=10", X_test, y_test, p_rf, t_rf_c10))
-        all_records.extend(_collect_forensic_rows(att, "GB", "Cost-Opt c=10", X_test, y_test, p_gb, t_gb_c10))
 
         del X_test, y_test
         trim_memory()
@@ -540,18 +532,17 @@ def plot_fig13_false_negative_forensics(
     fig, axes = plt.subplots(2, 2, figsize=(16.5, 11.5))
     rf_sum = pd.read_csv(BASELINE_DIR / "summary_rf_comparison.csv")
 
-    # ---------------- Ô (1,1): NEAR-MISS VS DEEP STEALTH (RF + GB + PAPER-EXACT RF) ----------------
+    # ---------------- Ô (1,1): NEAR-MISS VS DEEP STEALTH (OURS RF + PAPER-EXACT RF) ----------------
     ax1 = axes[0, 0]
     attacks = TARGET_ATTACKS
     fn_f1_all = df_forensics_all[(df_forensics_all["Category"] == "FN") & (df_forensics_all["Mode"] == "F1-Optimal")]
 
     x = np.arange(len(attacks))
     models_cfg = [
-        ("RF", -0.27, "#f39c12", "#c0392b", "Ours RF"),
-        ("GB", 0.0, "#f1c40f", "#922b21", "Ours HistGB"),
-        ("PaperRF", 0.27, "#eb984e", "#78281f", "Paper RF"),
+        ("RF", -0.19, "#f39c12", "#c0392b", "Ours RF"),
+        ("PaperRF", 0.19, "#eb984e", "#78281f", "Paper RF"),
     ]
-    bar_w = 0.25
+    bar_w = 0.34
     max_tot = 0
 
     for idx_m, (m_name, offset, nm_col, ds_col, m_label) in enumerate(models_cfg):
@@ -571,14 +562,14 @@ def plot_fig13_false_negative_forensics(
         for i, (nm, ds, tot) in enumerate(zip(nm_vals, ds_vals, tots)):
             if tot > 0:
                 nm_pct_str = f"{nm / tot:.0%}"
-                txt = f"{m_label.split()[0][0]}:{tot}\n({nm_pct_str})"
+                txt = f"{m_label.split()[0]}:{tot}\n({nm_pct_str})"
             else:
-                txt = f"{m_label.split()[0][0]}:0"
-            ax1.text(x[i] + offset, tot + 4, txt, ha="center", va="bottom", fontsize=6.8, fontweight="bold", color="#2c3e50")
+                txt = f"{m_label.split()[0]}:0"
+            ax1.text(x[i] + offset, tot + 4, txt, ha="center", va="bottom", fontsize=7.5, fontweight="bold", color="#2c3e50")
 
-    ax1.set_xlabel("Loại Tấn công (Cột trái->phải: Ours RF | Ours HistGB | Paper RF)", fontweight="bold")
+    ax1.set_xlabel("Loại Tấn công (Cột trái: Ours Improved RF | Cột phải: Paper-Exact RF)", fontweight="bold")
     ax1.set_ylabel("Số lượng Mẫu FN (F1-Optimal)", fontweight="bold")
-    ax1.set_title("So sánh FN Đa mô hình: Near-Miss vs Deep Stealth (RF, HistGB, PaperRF)", pad=10)
+    ax1.set_title("So sánh FN Hai hệ thống RF: Near-Miss vs Deep Stealth", pad=10)
     ax1.set_xticks(x)
     ax1.set_xticklabels(attacks, fontweight="bold")
     ax1.set_ylim(0, max(max_tot, 10) * 1.28)
@@ -696,10 +687,10 @@ def plot_fig13_false_negative_forensics(
     ax4 = axes[1, 1]
     ax4.axis("off")
 
-    gb_c10 = df_cost[(df_cost["Model"] == "GB") & (df_cost["Cost_Ratio_c"] == 10)]
-    gb_benign_pass = gb_c10["TN"] / (gb_c10["TN"] + gb_c10["FP"]) * 100.0
-    gb_pass_min = float(gb_benign_pass.min())
-    gb_pass_max = float(gb_benign_pass.max())
+    rf_c10 = df_cost[(df_cost["Model"] == "RF") & (df_cost["Cost_Ratio_c"] == 10)]
+    rf_benign_pass = rf_c10["TN"] / (rf_c10["TN"] + rf_c10["FP"]) * 100.0
+    rf_pass_min = float(rf_benign_pass.min())
+    rf_pass_max = float(rf_benign_pass.max())
     an_rf_c10_t = float(df_cost[(df_cost["Attack"] == "Analysis") & (df_cost["Model"] == "RF") & (df_cost["Cost_Ratio_c"] == 10)]["Optimal_Threshold"].iloc[0])
     an_rf_c10_low, _ = get_near_miss_bounds(an_rf_c10_t)
 
@@ -716,11 +707,11 @@ def plot_fig13_false_negative_forensics(
         f" • Ở DoS (RF): {dos_nm_pct:.1f}% FN nằm sát ngưỡng ({dos_near_low:.2f} <= p < {t_dos:.2f}).\n"
         "   Hạ ngưỡng theo Recall/Chi phí cứu được phần lớn các mẫu này.\n\n"
         "3. KIẾN TRÚC TRIỂN KHAI THỰC TẾ ĐỀ XUẤT (2-TIER HYBRID NIDS):\n"
-        f" • Tầng 1 (Batch Vectorized): HistGB ở c=10 cho qua đúng {gb_pass_min:.2f}%-{gb_pass_max:.2f}% Benign\n"
-        "   (tốc độ đo kiểm batch 172.7k-416.6k flows/s; suy luận đơn luồng ~4.1-5.8 ms).\n"
+        f" • Tầng 1 (Inline NetFlow RF): Ours RF ở c=10 cho qua đúng {rf_pass_min:.2f}%-{rf_pass_max:.2f}% Benign\n"
+        "   (giữ 99.7%+ lưu lượng sạch không bị cảnh báo nhầm với chi phí vận hành tối ưu).\n"
         " • Tầng 2 (Kiến trúc Chuyển tiếp DPI): Luồng vùng nghi vấn [t_low, t*) với\n"
         f"   t_low = min(0.10, 0.5*t*) (vd Analysis RF c=10: [{an_rf_c10_low:.4f}, {an_rf_c10_t:.3f}))\n"
-        "   được thiết kế chuyển tiếp sang Random Forest + heuristic/DPI tầng 7."
+        "   được định tuyến sang bộ phân tích heuristic NetFlow / DPI tầng 7."
     )
 
     ax4.text(0.03, 0.5, summary_text, transform=ax4.transAxes,
@@ -747,7 +738,6 @@ def generate_markdown_report(
     print("\n[*] Đang khởi tạo báo cáo tổng hợp: fn_and_cost_findings.md...")
 
     rf_rec = df_recall[df_recall["Model"] == "RF"]
-    gb_rec = df_recall[df_recall["Model"] == "GB"]
 
     # Rút trích động các nhận định cốt lõi Recall-Targeted
     an_rf_f1 = rf_rec[(rf_rec["Attack"] == "Analysis") & (rf_rec["Mode"] == "F1-Optimal")].iloc[0]
@@ -767,7 +757,7 @@ def generate_markdown_report(
     md_content = f"""# Báo cáo Khoa học Chuyên sâu: Tối ưu Ngưỡng Recall, Mô hình Nhạy chi phí & Giải phẫu Mẫu Bỏ sót (FN)
 
 **Dự án:** Phân loại Cảnh báo Xâm nhập Mạng (NIDS) trên dữ liệu NetFlow `NF-UNSW-NB15` (1.62M bản ghi)  
-**Phạm vi:** Giai đoạn 2 - Phần 2 (Đối chiếu RF, HistGB và Paper-Exact RF trên Held-out Test)  
+**Phạm vi:** Giai đoạn 2 - Tối ưu vận hành SOC & Giải phẫu FN trên Random Forest (`Ours Improved RF` & `Paper-Exact RF` trên Held-out Test)  
 **Ngày thực hiện:** {time.strftime('%Y-%m-%d %H:%M:%S')}  
 
 ---
@@ -796,27 +786,6 @@ Trong các Trung tâm Điều hành An ninh Mạng (SOC), mục tiêu quan trọ
                 f"**{int(r['FN'])}** | {delta_fn_str} | {delta_fp_str} |\n"
             )
 
-    md_content += """
-### Bảng 1b: Kết quả Điều chỉnh Ngưỡng theo Mục tiêu Recall trên Gradient Boosting (Without SMOTE)
-
-| Loại Tấn công | Chế độ | Ngưỡng $t^*$ | Near-Miss $t_{low}$ | Test Recall | Test Precision | Test F1 | FN Bị sót | Bắt thêm ($\\Delta$FN) | Đánh đổi Báo giả ($\\Delta$FP) |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-"""
-    for att in TARGET_ATTACKS:
-        sub = gb_rec[gb_rec["Attack"] == att]
-        for _, r in sub.iterrows():
-            if r["Mode"] == "F1-Optimal":
-                delta_fn_str = "0 (Gốc)"
-                delta_fp_str = "0 (Gốc)"
-            else:
-                delta_fn_str = f"**{int(r['Delta_FN_vs_F1Opt'])}** (Giảm)" if r["Delta_FN_vs_F1Opt"] < 0 else f"+{int(r['Delta_FN_vs_F1Opt'])}"
-                delta_fp_str = f"+{int(r['Delta_FP_vs_F1Opt'])}" if r["Delta_FP_vs_F1Opt"] > 0 else f"{int(r['Delta_FP_vs_F1Opt'])}"
-            md_content += (
-                f"| **{att}** | {r['Mode']} | {r['Threshold']} | {r['NearMiss_Lower_Bound']} | "
-                f"{r['Test_Recall']:.4f} | {r['Test_Precision']:.4f} | {r['Test_F1']:.4f} | "
-                f"**{int(r['FN'])}** | {delta_fn_str} | {delta_fp_str} |\n"
-            )
-
     md_content += f"""
 > [!IMPORTANT]
 > **Nhận định Cốt lõi (Từ dữ liệu đo kiểm RF):**
@@ -829,7 +798,7 @@ Trong các Trung tâm Điều hành An ninh Mạng (SOC), mục tiêu quan trọ
 
 Hàm tổn thất chi phí vận hành an ninh mạng:
 $$\\text{{Total\\_Cost}}(t) = c \\times \\text{{FN}}(t) + 1 \\times \\text{{FP}}(t)$$
-Trong thực tế tác chiến mạng, hậu quả của 1 cuộc tấn công lọt lưới (`FN`) nguy hiểm gấp nhiều lần một báo động giả (`FP`) do SOC phân tích nhầm. Bảng dưới đây khảo sát các hệ số thiệt hại $c \\in \\{{1, 5, 10, 20\\}}$ cho cả **Random Forest** và **HistGradientBoosting**, đồng thời áp dụng cận dưới Near-Miss thích ứng $t_{{low}} = \\min(0.10, 0.5 \\cdot t^*)$ để không làm sụp đổ vùng chuyển tiếp Tầng 2 khi $t^*_{{\\text{{cost}}}} < 0.10$.
+Trong thực tế tác chiến mạng, hậu quả của 1 cuộc tấn công lọt lưới (`FN`) nguy hiểm gấp nhiều lần một báo động giả (`FP`) do SOC phân tích nhầm. Bảng dưới đây khảo sát các hệ số thiệt hại $c \\in \\{{1, 5, 10, 20\\}}$ cho **Ours Improved Random Forest**, đồng thời áp dụng cận dưới Near-Miss thích ứng $t_{{low}} = \\min(0.10, 0.5 \\cdot t^*)$ để không làm sụp đổ vùng chuyển tiếp Tầng 2 khi $t^*_{{\\text{{cost}}}} < 0.10$.
 
 ### Bảng 2: Tối ưu Chi phí Vận hành trên Random Forest (Without SMOTE)
 
@@ -846,34 +815,12 @@ Trong thực tế tác chiến mạng, hậu quả của 1 cuộc tấn công l�
                 f"**{r['Cost_Reduction_Pct']:.2f}%** |\n"
             )
 
-    md_content += """
-### Bảng 2b: Tối ưu Chi phí Vận hành trên HistGradientBoosting (Without SMOTE)
-
-| Loại Tấn công | Hệ số Phạt $c$ | Ngưỡng Tối ưu $t^*_{\\text{cost}}$ | Near-Miss $t_{low}$ | FN tại $t^*$ | FP tại $t^*$ | Chi phí $t^*$ | Chi phí F1-Opt | **Tiết kiệm Chi phí (%)** |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-"""
-    gb_cost = df_cost[df_cost["Model"] == "GB"]
-    for att in TARGET_ATTACKS:
-        sub = gb_cost[gb_cost["Attack"] == att]
-        for _, r in sub.iterrows():
-            md_content += (
-                f"| **{att}** | $c={int(r['Cost_Ratio_c'])}$ | {r['Optimal_Threshold']:.3f} | {r['NearMiss_Lower_Bound']:.4f} | "
-                f"{int(r['FN'])} | {int(r['FP'])} | {int(r['Cost_Optimal']):,} | {int(r['Cost_at_F1Opt']):,} | "
-                f"**{r['Cost_Reduction_Pct']:.2f}%** |\n"
-            )
-
-    # Tạo chuỗi tóm tắt động c=10 cho RF và GB
+    # Tạo chuỗi tóm tắt động c=10 cho RF
     rf_c10_df = rf_cost[rf_cost["Cost_Ratio_c"] == 10].set_index("Attack")
-    gb_c10_df = gb_cost[gb_cost["Cost_Ratio_c"] == 10].set_index("Attack")
     rf_f1_fn_map = rf_rec[rf_rec["Mode"] == "F1-Optimal"].set_index("Attack")["FN"].to_dict()
-    gb_f1_fn_map = gb_rec[gb_rec["Mode"] == "F1-Optimal"].set_index("Attack")["FN"].to_dict()
 
     rf_c10_parts = [
         f"**{a} giảm {rf_c10_df.loc[a, 'Cost_Reduction_Pct']:.2f}%** (FN: {int(rf_f1_fn_map[a])} -> {int(rf_c10_df.loc[a, 'FN'])})"
-        for a in TARGET_ATTACKS
-    ]
-    gb_c10_parts = [
-        f"**{a} giảm {gb_c10_df.loc[a, 'Cost_Reduction_Pct']:.2f}%** (FN: {int(gb_f1_fn_map[a])} -> {int(gb_c10_df.loc[a, 'FN'])})"
         for a in TARGET_ATTACKS
     ]
     sub_010 = df_cost[df_cost["Optimal_Threshold"] < 0.10]
@@ -885,22 +832,21 @@ Trong thực tế tác chiến mạng, hậu quả của 1 cuộc tấn công l�
     md_content += f"""
 > [!TIP]
 > **Quy luật Dịch chuyển Ngưỡng ($c=10$):**
-> - **Random Forest ($c=10$):** {', '.join(rf_c10_parts)}.
-> - **HistGradientBoosting ($c=10$):** {', '.join(gb_c10_parts)}.
+> - **Ours Improved Random Forest ($c=10$):** {', '.join(rf_c10_parts)}.
 > - **Xử lý trường hợp $t^*_{{\\text{{cost}}}} < 0.10$:** Khi ngưỡng chi phí giảm sâu dưới `0.10` ({sub_010_list}), quy tắc thích ứng $t_{{low}} = \\min(0.10, 0.5 \\cdot t^*)$ giữ vùng Near-Miss $[t_{{low}}, t^*)$ luôn hợp lệ và không bị triệt tiêu về rỗng.
 
 ---
 
 ## 3. Giải phẫu Chuyên sâu Mẫu Tấn công Bị Bỏ sót (False Negative Forensics)
 
-### Bảng 3: Đối sánh FN Forensics Đa mô hình tại F1-Optimal (`RF` vs `HistGB` vs `PaperRF`)
+### Bảng 3: Đối sánh FN Forensics Hai Hệ thống Random Forest tại F1-Optimal (`Ours RF` vs `PaperRF`)
 
 | Loại Tấn công | Mô hình | Ngưỡng $t^*$ | Near-Miss $t_{{low}}$ | Tổng Mẫu FN | Near-Miss ($t_{{low}} \\le p < t^*$) | Deep Stealth ($p < t_{{low}}$) | `IN_BYTES` med (FN) | `OUT_BYTES` med (FN) | Zero-OutBytes (%) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 """
     fn_f1_rows = df_forensics_all[(df_forensics_all["Category"] == "FN") & (df_forensics_all["Mode"] == "F1-Optimal")]
     for att in TARGET_ATTACKS:
-        for m_name in ["RF", "GB", "PaperRF"]:
+        for m_name in ["RF", "PaperRF"]:
             sub = fn_f1_rows[(fn_f1_rows["Attack"] == att) & (fn_f1_rows["Model"] == m_name)]
             if sub.empty:
                 continue
@@ -920,7 +866,7 @@ Trong thực tế tác chiến mạng, hậu quả của 1 cuộc tấn công l�
 """
     fn_c10_rows = df_forensics_all[(df_forensics_all["Category"] == "FN") & (df_forensics_all["Mode"] == "Cost-Opt c=10")]
     for att in TARGET_ATTACKS:
-        for m_name in ["RF", "GB"]:
+        for m_name in ["RF"]:
             sub = fn_c10_rows[(fn_c10_rows["Attack"] == att) & (fn_c10_rows["Model"] == m_name)]
             if sub.empty:
                 continue
@@ -931,20 +877,20 @@ Trong thực tế tác chiến mạng, hậu quả của 1 cuộc tấn công l�
                 f"{int(r['Deep_Stealth_Count'])} ({r['Deep_Stealth_Pct']:.1f}%) |\n"
             )
 
-    # Tính thông số Analysis & HistGB Benign pass-through động cho Root Cause
+    # Tính thông số Analysis & RF Benign pass-through động cho Root Cause
     an_fn_rf = fn_f1_rows[(fn_f1_rows["Attack"] == "Analysis") & (fn_f1_rows["Model"] == "RF")].iloc[0]
     dos_fn_rf = fn_f1_rows[(fn_f1_rows["Attack"] == "DoS") & (fn_f1_rows["Model"] == "RF")].iloc[0]
-    gb_c10_pass = gb_c10_df["TN"] / (gb_c10_df["TN"] + gb_c10_df["FP"]) * 100.0
-    gb_pass_min = float(gb_c10_pass.min())
-    gb_pass_max = float(gb_c10_pass.max())
+    rf_c10_pass = rf_c10_df["TN"] / (rf_c10_df["TN"] + rf_c10_df["FP"]) * 100.0
+    rf_pass_min = float(rf_c10_pass.min())
+    rf_pass_max = float(rf_c10_pass.max())
 
     md_content += f"""
 ### Bản chất Vật lý Mạng của Hiện tượng Lọt lưới (Root Cause Analysis):
 1. **Thiếu thông tin Payload tầng 7 ở NetFlow:** Kẻ tấn công thực hiện hành vi dò quét/khai thác ứng dụng web (`Analysis`) trên cổng phổ thông (`Top_Dst_Ports` của FN RF: `{an_fn_rf['Top_Dst_Ports']}`). Ở tầng NetFlow, nhóm FN này có `IN_BYTES` trung vị **{an_fn_rf['IN_BYTES_median']:.1f}B** và `OUT_BYTES` trung vị **{an_fn_rf['OUT_BYTES_median']:.1f}B**, trùng khớp với lưu lượng web `Benign` thông thường.
-2. **Tỷ lệ Near-Miss cao ở F1-Optimal:** Với `DoS`, **{dos_fn_rf['Near_Miss_Pct']:.2f}%** mẫu FN của RF ({int(dos_fn_rf['Near_Miss_Count'])}/{int(dos_fn_rf['Count'])}) nằm sát ngưỡng (`{dos_fn_rf['NearMiss_Lower_Bound']:.2f} <= p < {dos_fn_rf['Threshold_Used']:.2f}`); trên `HistGB`, hiện tượng bão hòa ngưỡng F1-Opt (`t=0.99` ở `DoS`, `Backdoor`, `Analysis`) càng đẩy tỷ lệ Near-Miss lên cao hơn nữa trước khi được giải phóng bằng tối ưu chi phí $c=10$ hoặc hiệu chuẩn xác suất.
+2. **Tỷ lệ Near-Miss cao ở F1-Optimal:** Với `DoS`, **{dos_fn_rf['Near_Miss_Pct']:.2f}%** mẫu FN của RF ({int(dos_fn_rf['Near_Miss_Count'])}/{int(dos_fn_rf['Count'])}) nằm sát ngưỡng (`{dos_fn_rf['NearMiss_Lower_Bound']:.2f} <= p < {dos_fn_rf['Threshold_Used']:.2f}`); hạ ngưỡng theo chi phí ($c=10$) hoặc mục tiêu Recall ($R \\ge 98\\%, 99\\%$) giúp giải phóng và bắt giữ phần lớn các mẫu này.
 3. **Kiến trúc 2-Tier Hybrid NIDS Đề xuất:**
-   - **Tầng 1 (Suy luận tốc độ cao):** `HistGradientBoosting` với ngưỡng chi phí $c=10$ cho qua đúng **{gb_pass_min:.2f}%–{gb_pass_max:.2f}%** lưu lượng `Benign` (tốc độ đo kiểm batch **172.7k–416.6k flows/s** trên vector hóa, độ trễ suy luận đơn luồng **~4.1–5.8 ms**).
-   - **Tầng 2 (Kiến trúc Chuyển tiếp DPI & Heuristic NetFlow):** Các luồng nằm trong vùng nghi vấn $[t_{{low}}, t^*)$ (với $t_{{low}} = \\min(0.10, 0.5 \\cdot t^*)$) được thiết kế chuyển tiếp sang nhánh đối chứng `Random Forest` kết hợp kiểm tra sâu DPI (trong Web App demo hiện thực sẵn bộ phân tích heuristic NetFlow tầng L4/L7/TCP-flags làm lớp hỗ trợ quyết định).
+   - **Tầng 1 (Suy luận NetFlow tốc độ cao):** `Ours Improved RF` với ngưỡng chi phí $c=10$ cho qua đúng **{rf_pass_min:.2f}%–{rf_pass_max:.2f}%** lưu lượng `Benign` (giảm thiểu cảnh báo giả trên lưu lượng sạch).
+   - **Tầng 2 (Kiến trúc Chuyển tiếp DPI & Heuristic NetFlow):** Các luồng nằm trong vùng nghi vấn $[t_{{low}}, t^*)$ (với $t_{{low}} = \\min(0.10, 0.5 \\cdot t^*)$) được định tuyến sang bộ phân tích heuristic NetFlow tầng L4/L7/TCP-flags (và kiến trúc tích hợp Zeek/Suricata DPI giải mã payload tầng 7).
 
 ---
 *Báo cáo được tự động khởi tạo bởi `src/advanced_evaluation.py`.*

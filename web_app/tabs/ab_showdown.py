@@ -17,7 +17,6 @@ from inference_engine import CANONICAL_ATTACKS, NIDSInferenceEngine
 
 
 _FAMILY_LABELS: Dict[str, str] = {
-    "GB": "HistGradientBoosting (Ours-HistGB)",
     "RF": "Random Forest cải tiến (Ours-RF)",
     "PAPER": "Random Forest bài báo gốc (Paper-Exact RF)",
 }

@@ -123,3 +123,13 @@
   - **Đồng bộ Tài liệu (`report_soict_hust.html`, `README.md`, `REPORT.md`, `log.md`):**
     - Chuyển đổi toàn bộ 41 biểu thức LaTeX thô trong [report_soict_hust.html](report_soict_hust.html) thành HTML ngữ nghĩa tự chứa, sửa toàn bộ đối chiếu RF vs HistGB vs PaperRF (`c=1, 5, 10, 20`), hiệu chỉnh thông lượng/độ trễ thực đo, làm rõ phạm vi Tầng 2 heuristic và cập nhật kết quả Package A.
     - Cập nhật 4-Tab UI, `15+4 = 19` biểu đồ, `pytest`, và giải quyết toàn bộ các mục `[TODO]` trong [REPORT.md](REPORT.md).
+
+## [2026-11-24] Chuẩn hóa Dự án Thuần Random Forest (Loại bỏ Toàn bộ Nhánh Gradient Boosting)
+- **Đã làm:**
+  - **Xóa sạch mô hình & mã nguồn Gradient Boosting:** Gỡ bỏ `src/train_gb.py`, `src/plot_rf_vs_gb.py`, toàn bộ 10 model `gb_*.joblib` + selector + metadata trong `results/improved/models/`, 50 file `.npy`/`.csv` `gb_*`, `summary_gb_comparison.csv`, `rf_vs_gb_comparison.csv`, `fig09_rf_vs_gb_comparison.png`, `fig10_precision_recall_curves_rf_vs_gb.png` và các tệp `three_systems_*` cũ.
+  - **Cập nhật pipeline đánh giá & chẩn đoán cho mô hình duy nhất Random Forest (`Paper-Exact RF` vs `Ours Improved RF`):**
+    - Tái cấu trúc [src/advanced_evaluation.py](src/advanced_evaluation.py), [src/scientific_diagnostics.py](src/scientific_diagnostics.py) và [src/paper_original/compare_and_plot_paper_vs_ours.py](src/paper_original/compare_and_plot_paper_vs_ours.py) chỉ giữ 2 hệ thống RF (20 mô hình).
+    - Chạy tái tạo toàn bộ bảng số liệu (`recall_targeted_thresholds.csv`, `cost_sensitive_evaluation.csv`, `fn_forensic_analysis*.csv`, `two_systems_comparison.csv`, `soc_operational_comparison_c10.csv`, `calibration_diagnostics.csv`, `bootstrap_mcnemar_tests.csv`, `mixed_flow_orchestration_eval.csv`) và các biểu đồ `fig11`–`fig15`, `fig_p01`–`fig_p04`.
+  - **Đồng bộ Web Console, Kiểm thử & Tài liệu:**
+    - Cập nhật `web_app/` (`app.py`, `inference_engine.py`, `models_index.json`, `tabs/`) về **20 mô hình RF**, ma trận đồng thuận `5×2` và **17 biểu đồ 300 DPI**.
+    - Cập nhật [tests/](tests/), [README.md](README.md), [report_soict_hust.html](report_soict_hust.html) và [docs/giai_thich_chi_tiet_project1_ai.md](docs/giai_thich_chi_tiet_project1_ai.md).

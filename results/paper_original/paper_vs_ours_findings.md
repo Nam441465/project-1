@@ -1,20 +1,20 @@
-# Báo Cáo Khoa Học Đối Sánh: Paper-Exact Baseline (Pospíchal et al., 2026) vs Hai Hệ Thống Cải Tiến Của Dự Án
+# Báo Cáo Khoa Học Đối Sánh: Paper-Exact RF (Pospíchal et al., 2026) vs Ours Improved RF
 
 **Bộ dữ liệu đánh giá chung (Apples-to-Apples):** `NF-UNSW-NB15` (1,623,118 bản ghi NetFlow v1; 10 đặc trưng lưu lượng; cùng phân vùng Stratified `Train = 1,104,497` | `Val = 155,586` | `Held-out Test = 363,035`).  
 **Bài báo gốc đối chiếu:** Jiří Pospíchal, Aleš Augustín, Ladislav Huraj, Peter Střelec & Darja Gabriška, *"Random Forest-Based Network Intrusion Detection with Feature Selection and Class Balancing on UNSW-NB15 Traffic"*, MDPI *Information* 2026, 17, 836.
 
 ---
 
-## 1. Thiết Kế Thực Nghiệm Đối Chứng 3 Hệ Thống
+## 1. Thiết Kế Thực Nghiệm Đối Chứng 2 Hệ Thống Random Forest
 
-Để đảm bảo tính khách quan tuyệt đối (1-đối-1), cả 3 hệ thống đều đọc chung các phân vùng `train.parquet`, `val.parquet` và `heldout_test.parquet`, chỉ khác biệt ở **phương pháp luận pipeline**:
+Để đảm bảo tính khách quan tuyệt đối (1-đối-1), cả 2 hệ thống Random Forest đều đọc chung các phân vùng `train.parquet`, `val.parquet` và `heldout_test.parquet`, chỉ khác biệt ở **phương pháp luận pipeline**:
 
-| Thành phần Pipeline | Hệ thống 1: **Paper-Exact RF** (`src/paper_original/`) | Hệ thống 2: **Ours Improved RF** (`src/train_rf.py`) | Hệ thống 3: **Ours HistGB & 2-Tier SOC** (`src/train_gb.py` + `advanced_evaluation.py`) |
-| :--- | :--- | :--- | :--- |
-| **Cân bằng SMOTE (56,000 mẫu)** | Chạy 1 lần trên toàn bộ `X_train` **trước** `SelectKBest` & **trước** 3-Fold CV (*rò rỉ mẫu nội suy giữa các fold CV*) | Đóng gói `ImbPipeline` để SMOTE **chỉ chạy bên trong từng train-fold** của CV (*triệt tiêu rò rỉ CV*) | Nhánh `Without SMOTE` dùng *Hybrid Minority-Preserving Sampling* (100% Attack + 150k Benign); nhánh `SMOTE` dùng `ImbPipeline` |
-| **Chọn đặc trưng Mutual Info** | `SelectKBest(mutual_info_classif, random_state=10)` mặc định `discrete_features='auto'` (*xử lý nhầm toàn bộ cột số nguyên rời rạc như biến liên tục*) | `MutualInfoScorer` tùy chỉnh khai báo chính xác `DISCRETE_FEATURES` (`PROTOCOL`, `TCP_FLAGS`, ports, `L7_PROTO` factorized) | Thừa hưởng bộ `MutualInfoScorer` chuẩn xác cho không gian hỗn hợp rời rạc - liên tục |
-| **Tối ưu siêu tham số CV** | `RandomizedSearchCV(n_iter=10, cv=3)` trực tiếp trên **100% tập Train (~1.06M - 1.11M dòng)** | `RandomizedSearchCV(n_iter=10, cv=3)` trên tập con phân tầng đại diện `150,000` mẫu, sau đó fit lại trên 100% tập Train | `HistGradientBoostingClassifier` chia 255 giỏ histogram + song song hóa OpenMP |
-| **Chỉnh ngưỡng Quyết định** | Chỉ quét `np.arange(0.05, 0.95, 0.01)` tối ưu duy nhất chỉ số `F1` | Mở rộng `0.01..0.99` + Tích hợp ngưỡng **Recall-Targeted** ($R \ge 95\%, 98\%, 99\%$) & **Cost-Sensitive** ($c=10, 20$) | Ngưỡng nhạy chi phí SOC ($c=10$) làm màng lọc Tầng 1 tốc độ cao kết hợp DPI Tầng 2 |
+| Thành phần Pipeline | Hệ thống 1: **Paper-Exact RF** (`src/paper_original/`) | Hệ thống 2: **Ours Improved RF & 2-Tier SOC** (`src/train_rf.py` + `advanced_evaluation.py`) |
+| :--- | :--- | :--- |
+| **Cân bằng SMOTE (56,000 mẫu)** | Chạy 1 lần trên toàn bộ `X_train` **trước** `SelectKBest` & **trước** 3-Fold CV (*rò rỉ mẫu nội suy giữa các fold CV*) | Đóng gói `ImbPipeline` để SMOTE **chỉ chạy bên trong từng train-fold** của CV (*triệt tiêu rò rỉ CV*) |
+| **Chọn đặc trưng Mutual Info** | `SelectKBest(mutual_info_classif, random_state=10)` mặc định `discrete_features='auto'` (*xử lý nhầm toàn bộ cột số nguyên rời rạc như biến liên tục*) | `MutualInfoScorer` tùy chỉnh khai báo chính xác `DISCRETE_FEATURES` (`PROTOCOL`, `TCP_FLAGS`, `L7_PROTO` factorized) |
+| **Tối ưu siêu tham số CV** | `RandomizedSearchCV(n_iter=10, cv=3)` trực tiếp trên **100% tập Train (~1.06M - 1.11M dòng)** | `RandomizedSearchCV(n_iter=10, cv=3)` trên tập con phân tầng đại diện `150,000` mẫu, sau đó fit lại trên 100% tập Train |
+| **Chỉnh ngưỡng Quyết định** | Chỉ quét `np.arange(0.05, 0.95, 0.01)` tối ưu duy nhất chỉ số `F1` | Mở rộng `0.01..0.99` + Tích hợp ngưỡng **Recall-Targeted** ($R \ge 95\%, 98\%, 99\%$) & **Cost-Sensitive** ($c=10, 20$) |
 
 ---
 
@@ -39,15 +39,15 @@
 
 ---
 
-## 3. Đối Sánh Trực Tiếp 3 Hệ Thống (Điều Kiện Chuẩn Without SMOTE)
+## 3. Đối Sánh Trực Tiếp 2 Hệ Thống Random Forest (Điều Kiện Chuẩn Without SMOTE)
 
-| Loại Tấn công | **Paper-Exact RF** $F_1$ ($k^*$, $t^*$) | **Ours Improved RF** $F_1$ ($k^*$, $t^*$) | **Ours HistGB** $F_1$ ($k^*$, $t^*$) | $\Delta F_1$ (Ours RF vs Paper) | Thời gian $k^*$ (Paper / Ours RF / Ours GB) | Tăng tốc Pipeline (Ours GB vs Paper) |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **DoS** | 0.8807 ($k=10$, $t=0.42$) | **0.8650** ($k=10$, $t=0.76$) | 0.8200 ($k=10$, $t=0.99$) | `-0.0157` | 4492.9s / 315.5s / **80.1s** | **Nhanh hơn 56.1x** |
-| **Exploits** | 0.9470 ($k=10$, $t=0.46$) | **0.9470** ($k=10$, $t=0.46$) | 0.9328 ($k=10$, $t=0.87$) | `+0.0000` | 4586.0s / 324.3s / **81.2s** | **Nhanh hơn 56.4x** |
-| **Backdoor** | 0.9385 ($k=10$, $t=0.28$) | **0.9535** ($k=10$, $t=0.30$) | 0.9386 ($k=10$, $t=0.99$) | `+0.0150` | 2122.8s / 220.2s / **73.1s** | **Nhanh hơn 29.1x** |
-| **Analysis** | 0.8786 ($k=7$, $t=0.67$) | **0.8733** ($k=3$, $t=0.55$) | 0.8690 ($k=3$, $t=0.99$) | `-0.0053` | 1895.8s / 158.1s / **36.2s** | **Nhanh hơn 52.4x** |
-| **Reconnaissance** | 0.9674 ($k=10$, $t=0.48$) | **0.9673** ($k=10$, $t=0.44$) | 0.9611 ($k=10$, $t=0.83$) | `-0.0001` | 2070.2s / 251.0s / **82.4s** | **Nhanh hơn 25.1x** |
+| Loại Tấn công | **Paper-Exact RF** $F_1$ ($k^*$, $t^*$) | **Ours Improved RF** $F_1$ ($k^*$, $t^*$) | $\Delta F_1$ (Ours RF vs Paper) | Thời gian $k^*$ (Paper / Ours RF) | Tăng tốc Pipeline (Ours RF vs Paper) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **DoS** | 0.8807 ($k=10$, $t=0.42$) | **0.8650** ($k=10$, $t=0.76$) | `-0.0157` | 4492.9s / **315.5s** | **Nhanh hơn 14.2x** |
+| **Exploits** | 0.9470 ($k=10$, $t=0.46$) | **0.9470** ($k=10$, $t=0.46$) | `+0.0000` | 4586.0s / **324.3s** | **Nhanh hơn 14.1x** |
+| **Backdoor** | 0.9385 ($k=10$, $t=0.28$) | **0.9535** ($k=10$, $t=0.30$) | `+0.0150` | 2122.8s / **220.2s** | **Nhanh hơn 9.6x** |
+| **Analysis** | 0.8786 ($k=7$, $t=0.67$) | **0.8733** ($k=3$, $t=0.55$) | `-0.0053` | 1895.8s / **158.1s** | **Nhanh hơn 12.0x** |
+| **Reconnaissance** | 0.9674 ($k=10$, $t=0.48$) | **0.9673** ($k=10$, $t=0.44$) | `-0.0001` | 2070.2s / **251.0s** | **Nhanh hơn 8.2x** |
 
 ---
 
@@ -68,27 +68,26 @@
   - **Analysis (With SMOTE):** 3-Fold CV $F_1$ báo ảo **0.9911**, nhưng khi kiểm tra trên Held-out Test thực tế rơi xuống **0.8724** (độ sụt giảm ảo giác `-0.1187`, phát sinh **9** cảnh báo giả FP vs **9** FP trên `Ours RF`).
   - **Reconnaissance (With SMOTE):** 3-Fold CV $F_1$ báo ảo **0.9944**, nhưng khi kiểm tra trên Held-out Test thực tế rơi xuống **0.9642** (độ sụt giảm ảo giác `-0.0302`, phát sinh **145** cảnh báo giả FP vs **146** FP trên `Ours RF`).
 
-### 4.3. Phát hiện 3: Giải quyết Triệt để Nút thắt Chi phí Tính toán trên Quy mô Hàng triệu Luồng NetFlow
+### 4.3. Phát hiện 3: Giải quyết Nút thắt Chi phí Tính toán trên Quy mô Hàng triệu Luồng NetFlow
 
 - Bài báo gốc thực nghiệm trên tập UNSW-NB15 gói tin nhỏ hơn (`175,341` dòng Train), nhưng khi mở rộng sang quy mô thực tế `NF-UNSW-NB15` (`1,104,497` dòng Train), việc chạy `RandomizedSearchCV` (`10 iter × 3 folds = 30` mô hình rừng ngẫu nhiên cho mỗi mốc $k$, tổng cộng `120` mô hình rừng cho mỗi bài toán) trên 100% dữ liệu tạo ra rào cản tính toán khổng lồ.
-- Hệ thống **Ours Improved RF** cắt giảm hàng chục lần thời gian tìm kiếm siêu tham số nhờ lấy mẫu phân tầng `150,000` dòng khi dò tham số rồi mới huấn luyện 100% dữ liệu, mà **không hề làm giảm (thậm chí cải thiện nhẹ) điểm $F_1$ trên Held-out Test**.
-- Đặc biệt, hệ thống **Ours HistGradientBoosting** đạt mức tăng tốc toàn diện từ hàng chục đến hàng trăm lần so với Paper-Exact Pipeline, biến việc tái huấn luyện mô hình liên tục (Continuous Retraining) hàng giờ thành vài giây.
+- Hệ thống **Ours Improved RF** cắt giảm nhiều lần thời gian tìm kiếm siêu tham số nhờ lấy mẫu phân tầng `150,000` dòng khi dò tham số rồi mới huấn luyện 100% dữ liệu, mà **không hề làm giảm (thậm chí cải thiện nhẹ) điểm $F_1$ trên Held-out Test**.
 
 ### 4.4. Phát hiện 4: Giới hạn của Dải ngưỡng `0.05..0.94` Tối ưu Thuần $F_1$ vs Tối ưu Chi phí Vận hành SOC ($c=10$)
 
-- Bài báo gốc giới hạn dải quét ngưỡng ở `[0.05, 0.94]` và chỉ tối ưu điểm $F_1$ đối xứng (coi trọng số lỗi bỏ sót tấn công `FN` ngang bằng với báo nhầm `FP`). Để tách bạch **lợi ích do đổi hàm mục tiêu chỉnh ngưỡng** khỏi **lợi ích do cải tiến pipeline/mô hình**, bảng dưới đây bổ sung thêm đối chứng **Paper-Exact RF (Cost-Opt $c=10$)** sử dụng chính vector xác suất của mô hình bài báo gốc trên lưới `0.005..0.995`:
+- Bài báo gốc giới hạn dải quét ngưỡng ở `[0.05, 0.94]` và chỉ tối ưu điểm $F_1$ đối xứng (coi trọng số lỗi bỏ sót tấn công `FN` ngang bằng với báo nhầm `FP`). Để tách bạch **lợi ích do đổi hàm mục tiêu chỉnh ngưỡng** khỏi **lợi ích do cải tiến pipeline**, bảng dưới đây bổ sung thêm đối chứng **Paper-Exact RF (Cost-Opt $c=10$)** sử dụng chính vector xác suất của mô hình bài báo gốc trên lưới `0.005..0.995`:
 
-| Loại Tấn công | Paper-Exact RF F1-Opt (`t`, `FN`/`FP`/`Cost`) | Paper-Exact RF Cost-Opt $c=10$ (`t*`, `FN`/`FP`/`Cost`) | Ours RF Cost-Opt $c=10$ (`t*`, `FN`/`FP`/`Cost`) | Ours HistGB Cost-Opt $c=10$ (`t*`, `FN`/`FP`/`Cost`) | **Cứu FN: Đổi ngưỡng / Đổi Pipeline (Ours RF)** | **Tiết kiệm Chi phí (Ours RF vs Paper F1 / vs Paper c=10)** |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **DoS** | `0.42`: 96 / 184 / **1,144** | `0.155`: 31 / 419 / **729** | `0.485`: **34** / 427 / **767** | `0.840`: 32 / 665 / 985 | +65 / -3 | **+32.95%** / -5.21% |
-| **Exploits** | `0.46`: 186 / 413 / **2,273** | `0.125`: 54 / 903 / **1,443** | `0.125`: **54** / 903 / **1,443** | `0.535`: 57 / 975 / 1,545 | +132 / +0 | **+36.52%** / +0.00% |
-| **Backdoor** | `0.28`: 24 / 25 / **265** | `0.155`: 16 / 65 / **225** | `0.145`: **12** / 54 / **174** | `0.235`: 9 / 74 / 164 | +8 / +4 | **+34.34%** / +22.67% |
-| **Analysis** | `0.67`: 95 / 2 / **952** | `0.090`: 38 / 318 / **698** | `0.035`: **14** / 715 / **855** | `0.340`: 27 / 603 / 873 | +57 / +24 | **+10.19%** / -22.49% |
-| **Reconnaissance** | `0.48`: 35 / 148 / **498** | `0.235`: 15 / 187 / **337** | `0.225`: **15** / 189 / **339** | `0.220`: 11 / 254 / 364 | +20 / +0 | **+31.93%** / -0.59% |
+| Loại Tấn công | Paper-Exact RF F1-Opt (`t`, `FN`/`FP`/`Cost`) | Paper-Exact RF Cost-Opt $c=10$ (`t*`, `FN`/`FP`/`Cost`) | Ours RF Cost-Opt $c=10$ (`t*`, `FN`/`FP`/`Cost`) | **Cứu FN: Đổi ngưỡng / Đổi Pipeline (Ours RF)** | **Tiết kiệm Chi phí (Ours RF vs Paper F1 / vs Paper c=10)** |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **DoS** | `0.42`: 96 / 184 / **1,144** | `0.155`: 31 / 419 / **729** | `0.485`: **34** / 427 / **767** | +65 / -3 | **+32.95%** / -5.21% |
+| **Exploits** | `0.46`: 186 / 413 / **2,273** | `0.125`: 54 / 903 / **1,443** | `0.125`: **54** / 903 / **1,443** | +132 / +0 | **+36.52%** / +0.00% |
+| **Backdoor** | `0.28`: 24 / 25 / **265** | `0.155`: 16 / 65 / **225** | `0.145`: **12** / 54 / **174** | +8 / +4 | **+34.34%** / +22.67% |
+| **Analysis** | `0.67`: 95 / 2 / **952** | `0.090`: 38 / 318 / **698** | `0.035`: **14** / 715 / **855** | +57 / +24 | **+10.19%** / -22.49% |
+| **Reconnaissance** | `0.48`: 35 / 148 / **498** | `0.235`: 15 / 187 / **337** | `0.225`: **15** / 189 / **339** | +20 / +0 | **+31.93%** / -0.59% |
 
 > **Tổng kết Ablation trên cả 5 tấn công ($c=10$):**
 > - **1. Lợi ích thuần từ chỉnh ngưỡng (`Paper-Exact RF F1-Opt` $\rightarrow$ `Paper-Exact RF c=10`):** Tổng `FN` giảm từ **436 $\rightarrow$ 154** (cứu thêm **282** cuộc tấn công), tổng chi phí SOC giảm từ **5,132 $\rightarrow$ 3,432** (**-33.13%**).
-> - **2. Lợi ích từ cải tiến Pipeline/Mô hình (cùng chế độ `c=10`):** Tổng `FN` tiếp tục giảm từ **154 $\rightarrow$ 129** trên `Ours RF` (tổng chi phí **3,578**) và **154 $\rightarrow$ 136** trên `Ours HistGB` (tổng chi phí **3,931** với tốc độ search+fit nhanh hơn hàng chục lần).
+> - **2. Lợi ích từ cải tiến Pipeline RF (cùng chế độ `c=10`):** Tổng `FN` tiếp tục giảm từ **154 $\rightarrow$ 129** trên `Ours Improved RF` (tổng chi phí **3,578**).
 
 
 ---
@@ -96,10 +95,10 @@
 ## 5. Danh Mục Tệp Số Liệu & Biểu Đồ Đối Sánh Đã Xuất (`results/paper_original/`)
 
 1. [summary_paper_rf_comparison.csv](summary_paper_rf_comparison.csv): Bảng tổng hợp 10 mô hình Paper-Exact RF (`Without SMOTE` & `With SMOTE`).
-2. [three_systems_comparison.csv](three_systems_comparison.csv): Bảng đối sánh toàn diện 1-đối-1 giữa **Paper-Exact RF**, **Ours Improved RF** và **Ours HistGradientBoosting**.
+2. [two_systems_comparison.csv](two_systems_comparison.csv): Bảng đối sánh toàn diện 1-đối-1 giữa **Paper-Exact RF** và **Ours Improved RF**.
 3. [soc_operational_comparison_c10.csv](soc_operational_comparison_c10.csv): Bảng định lượng hiệu quả cắt giảm `FN` và chi phí rủi ro SOC tại $c=10$.
 4. [mi_ranking_distortion_comparison.csv](mi_ranking_distortion_comparison.csv): Bảng phân tích độ lệch điểm số và thứ hạng đặc trưng Mutual Information.
-5. [figures/fig_p01_three_systems_f1_and_speed.png](figures/fig_p01_three_systems_f1_and_speed.png): Đối sánh $F_1$-Score và tổng thời gian tính toán (Search + Fit) của 3 hệ thống.
+5. [figures/fig_p01_two_systems_f1_and_speed.png](figures/fig_p01_two_systems_f1_and_speed.png): Đối sánh $F_1$-Score và tổng thời gian tính toán (Search + Fit) của 2 hệ thống RF.
 6. [figures/fig_p02_smote_paradox_and_leakage_ablation.png](figures/fig_p02_smote_paradox_and_leakage_ablation.png): Giải phẫu nghịch lý SMOTE, ảo giác rò rỉ 3-Fold CV, báo động giả FP và độ lệch MI.
-7. [figures/fig_p03_pr_curves_three_systems.png](figures/fig_p03_pr_curves_three_systems.png): Đường cong Precision-Recall và điểm hoạt động của 3 hệ thống trên 5 loại tấn công.
+7. [figures/fig_p03_pr_curves_two_systems.png](figures/fig_p03_pr_curves_two_systems.png): Đường cong Precision-Recall và điểm hoạt động của 2 hệ thống RF trên 5 loại tấn công.
 8. [figures/fig_p04_soc_cost_and_fn_comparison.png](figures/fig_p04_soc_cost_and_fn_comparison.png): Mức độ cắt giảm tấn công bỏ sót (`FN`) và tiết kiệm chi phí vận hành SOC ($c=10$).

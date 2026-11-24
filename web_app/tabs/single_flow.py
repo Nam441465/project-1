@@ -2,7 +2,7 @@
 """
 tabs/single_flow.py
 Tab 1: Kiểm tra đơn luồng (Single-Flow Inspection), Giải mã Giao thức,
-Kiểm tra Heuristic Tầng 2 và Ma trận Đồng thuận 5×3.
+Kiểm tra Heuristic Tầng 2 và Ma trận Đồng thuận 5×2.
 """
 
 from __future__ import annotations
@@ -300,10 +300,10 @@ def render_single_flow_tab(
 
     if att_filter_val == "all":
         st.markdown("---")
-        st.markdown("#### Ma Trận Đồng Thuận Đa Mô Hình (5 loại tấn công × 3 họ mô hình)")
+        st.markdown("#### Ma Trận Đồng Thuận Đa Mô Hình (5 loại tấn công × 2 họ Random Forest)")
         st.caption(
-            "Tổng hợp xác suất, biên độ lệch ngưỡng (`prob - thresh`), tỷ lệ đồng thuận (`k/3`) "
-            "và độ trễ trên 5 loại tấn công và 3 họ mô hình (`PAPER`, `Ours-RF`, `Ours-HistGB`)."
+            "Tổng hợp xác suất, biên độ lệch ngưỡng (`prob - thresh`), tỷ lệ đồng thuận (`k/2`) "
+            "và độ trễ trên 5 loại tấn công và 2 họ mô hình (`PAPER`, `Ours-RF`)."
         )
         matrices = build_consensus_matrix(details_df)
         for cond_label, matrix_df in matrices.items():
@@ -311,7 +311,7 @@ def render_single_flow_tab(
                 st.markdown(f"**Điều kiện huấn luyện: `{cond_label}`**")
             show_cols = [
                 c
-                for c in ["Attack", "PAPER", "Ours-RF", "Ours-HistGB", "Consensus", "Total_Latency_ms"]
+                for c in ["Attack", "PAPER", "Ours-RF", "Consensus", "Total_Latency_ms"]
                 if c in matrix_df.columns
             ]
             st.dataframe(
@@ -322,8 +322,7 @@ def render_single_flow_tab(
                     "Attack": "Loại tấn công",
                     "PAPER": "PAPER (Xác suất / Biên ngưỡng)",
                     "Ours-RF": "Ours-RF (Xác suất / Biên ngưỡng)",
-                    "Ours-HistGB": "Ours-HistGB (Xác suất / Biên ngưỡng)",
-                    "Consensus": "Đồng thuận (k/3)",
+                    "Consensus": "Đồng thuận (k/2)",
                     "Total_Latency_ms": st.column_config.NumberColumn("Tổng độ trễ (ms)", format="%.2f ms"),
                 },
             )

@@ -1,70 +1,5 @@
 {
   "entries": {
-    "gb_analysis_smote": {
-      "calibrated_thresholds": {
-        "Cost-Sensitive (c=10)": 0.015,
-        "Cost-Sensitive (c=20)": 0.015,
-        "Recall >= 95%": 0.091,
-        "Recall >= 98%": 0.028,
-        "Recall >= 99%": 0.017
-      },
-      "default_f1_threshold": 0.95,
-      "meta_mtime_ns": 1792830128791215400,
-      "p_val_mtime_ns": 1792830128745270688,
-      "y_val_mtime_ns": 1792830128758345275
-    },
-    "gb_backdoor_smote": {
-      "calibrated_thresholds": {
-        "Cost-Sensitive (c=10)": 0.325,
-        "Cost-Sensitive (c=20)": 0.325,
-        "Recall >= 95%": 0.918,
-        "Recall >= 98%": 0.397,
-        "Recall >= 99%": 0.021
-      },
-      "default_f1_threshold": 0.96,
-      "meta_mtime_ns": 1792829696251588469,
-      "p_val_mtime_ns": 1792829696220584821,
-      "y_val_mtime_ns": 1792829696230640859
-    },
-    "gb_dos_smote": {
-      "calibrated_thresholds": {
-        "Cost-Sensitive (c=10)": 0.41,
-        "Cost-Sensitive (c=20)": 0.18,
-        "Recall >= 95%": 0.499,
-        "Recall >= 98%": 0.243,
-        "Recall >= 99%": 0.071
-      },
-      "default_f1_threshold": 0.88,
-      "meta_mtime_ns": 1792828523981424607,
-      "p_val_mtime_ns": 1792828523940337081,
-      "y_val_mtime_ns": 1792828523951519681
-    },
-    "gb_exploits_smote": {
-      "calibrated_thresholds": {
-        "Cost-Sensitive (c=10)": 0.22,
-        "Cost-Sensitive (c=20)": 0.22,
-        "Recall >= 95%": 0.69,
-        "Recall >= 98%": 0.437,
-        "Recall >= 99%": 0.325
-      },
-      "default_f1_threshold": 0.69,
-      "meta_mtime_ns": 1792829217227936596,
-      "p_val_mtime_ns": 1792829217174206383,
-      "y_val_mtime_ns": 1792829217187820771
-    },
-    "gb_reconnaissance_smote": {
-      "calibrated_thresholds": {
-        "Cost-Sensitive (c=10)": 0.165,
-        "Cost-Sensitive (c=20)": 0.165,
-        "Recall >= 95%": 0.83,
-        "Recall >= 98%": 0.83,
-        "Recall >= 99%": 0.654
-      },
-      "default_f1_threshold": 0.83,
-      "meta_mtime_ns": 1792830540424512384,
-      "p_val_mtime_ns": 1792830540404257020,
-      "y_val_mtime_ns": 1792830540415508997
-    },
     "paper_analysis_nosmote": {
       "calibrated_thresholds": {
         "Cost-Sensitive (c=10)": 0.09,
@@ -262,5 +197,5 @@
     }
   },
   "schema_version": 1,
-  "updated_at": "2026-11-20T13:03:14"
+  "updated_at": "2026-11-24T22:28:24"
 }

@@ -81,7 +81,7 @@ def test_app_tab4_registry_sorted_and_reload():
 
     inspect_sb = at.selectbox(key="sb_registry_inspect")
     assert list(inspect_sb.options) == sorted(inspect_sb.options)
-    assert len(inspect_sb.options) == 30
+    assert len(inspect_sb.options) == 20
 
     reload_btn = at.button(key="btn_reload_registry")
     reload_btn.click().run()
